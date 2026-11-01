@@ -95,7 +95,7 @@ export class DemoHost {
           state = { screen: 'help', user: s.user, back: 'menu', topic: 'menu', page: 0 };
           return show(menuHelp(0));
         }
-        return show(new HostStream().errorMessage('CPD9001 - Help is not available for this display.').build());
+        return show(new HostStream().errorMessage('Help is not available for this display.').build());
       }
       if (s.screen === 'help') {
         const pages = s.back === 'menu' ? MENU_HELP.length : (ORDER_HELP[s.topic] ?? ORDER_HELP.order!).length;
@@ -105,7 +105,7 @@ export class DemoHost {
           return show(s.back === 'menu' ? mainMenu(s.user) : orderEntry());
         }
         if (aid === 0xf5) {
-          if (s.page + 1 >= pages) return show(new HostStream().errorMessage('CPF6A07 - Already at bottom of help.').build());
+          if (s.page + 1 >= pages) return show(new HostStream().errorMessage('Already at the bottom of help.').build());
           state = { ...s, page: s.page + 1 };
           return show(draw(s.page + 1));
         }
@@ -118,7 +118,7 @@ export class DemoHost {
       if (s.screen === 'signon') {
         const user = (fields.get('6:53') ?? '').trim().toUpperCase();
         if (aid !== 0xf1) return show(signOn());
-        if (!user) return show(signOn('CPF1120 - User blank not valid.'));
+        if (!user) return show(signOn('Type a user name. Any name works in the demo.'));
         state = { screen: 'menu', user };
         return show(mainMenu(user));
       }
@@ -149,7 +149,7 @@ export class DemoHost {
           return show(jobs(0));
         }
         if (!cmd) return show(mainMenu(s.user));
-        return show(new HostStream().errorMessage(`CPD0030 - Command ${cmd} in library *LIBL not found.`).build());
+        return show(new HostStream().errorMessage(`${cmd} is not an option or command in the demo.`).build());
       }
       if (s.screen === 'order') {
         if (aid === 0x3c || aid === 0x33) { state = { screen: 'menu', user: s.user }; return show(mainMenu(s.user)); }
@@ -202,7 +202,7 @@ export class DemoHost {
           state = { screen: 'menu', user: s.user };
           return show(mainMenu(s.user, menu && aid === 0xf1 ? `Menu ${menu} is not available in the demo.` : undefined));
         }
-        return show(new HostStream().errorMessage('CPD0071 - Value required for Menu.').build());
+        return show(new HostStream().errorMessage('Type a menu name.').build());
       }
       if (s.screen === 'jobs') {
         const pages = Math.ceil(JOBS.length / PAGE_SIZE);
@@ -244,7 +244,6 @@ function signOn(error?: string): number[] {
     .field(9, 53, 10, { ffw: 0x4020 })
     .text(10, 17, 'Menu  . . . . . . . . . . . . . .')
     .field(10, 53, 10, { ffw: 0x4020 })
-    .text(24, 40, '(C) COPYRIGHT IBM CORP. 1980, 2024.')
     .cursor(6, 53).readMdt().build();
   return error ? [...s, ...new HostStream().errorMessage(error).build()] : s;
 }
@@ -394,7 +393,7 @@ function menuWindow(): number[] {
 function mainMenu(user: string, message?: string): number[] {
   return new HostStream().clear().write()
     .text(1, 2, 'MAIN')
-    .text(1, 33, 'IBM i Main Menu', WHITE)
+    .text(1, centered('Demo Main Menu'), 'Demo Main Menu', WHITE)
     .text(1, 64, 'System:   VENEER')
     .text(3, 2, 'Select one of the following:')
     .text(5, 6, '1. User tasks')
@@ -406,7 +405,6 @@ function mainMenu(user: string, message?: string): number[] {
     .text(12, 6, '8. Problem handling')
     .text(13, 6, '9. Display a menu')
     .text(14, 5, '10. Information Assistant options')
-    .text(15, 5, '11. IBM i Access tasks')
     .text(17, 5, '90. Sign off')
     .text(19, 2, 'Selection or command')
     .text(20, 2, '===>')
