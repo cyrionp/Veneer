@@ -33,6 +33,7 @@ type State =
   | { screen: 'menu'; user: string }
   | { screen: 'menuWindow'; user: string }
   | { screen: 'order'; user: string }
+  | { screen: 'customer'; user: string; index: number }
   | { screen: 'jobs'; user: string; page: number }
   /** Help, shown from `back` (the screen Help was pressed on) about `topic`. */
   | { screen: 'help'; user: string; back: 'order' | 'menu'; topic: string; page: number };
@@ -108,6 +109,10 @@ export class DemoHost {
           state = { screen: 'order', user: s.user };
           return show(orderEntry());
         }
+        if (cmd === '3') {
+          state = { screen: 'customer', user: s.user, index: 0 };
+          return show(customerAddresses(0));
+        }
         if (aid === 0x34 || cmd === '9') { // F4 or "Display a menu"
           state = { screen: 'menuWindow', user: s.user };
           return show(menuWindow());
@@ -127,6 +132,17 @@ export class DemoHost {
         const summary = `Accepted: ${value('6:22')} ${value('7:22')} qty ${qty} item ${value('9:22')} ` +
           `ship ${value('10:22') || '-'} rush ${value('11:22') || 'N'}`.slice(0, 78);
         return show(orderEntry(summary));
+      }
+      if (s.screen === 'customer') {
+        if (aid === 0x3c || aid === 0x33) { state = { screen: 'menu', user: s.user }; return show(mainMenu(s.user)); }
+        const typed = (fields.get('4:22') ?? '').trim();
+        const found = typed ? CUSTOMERS.findIndex((c) => c.number === typed.padStart(6, '0')) : -1;
+        // Enter with a known number shows it; otherwise PageDown/Enter goes to the next customer, PageUp back.
+        const index = found >= 0 ? found
+          : aid === 0xf4 ? (s.index + CUSTOMERS.length - 1) % CUSTOMERS.length
+          : (s.index + 1) % CUSTOMERS.length;
+        state = { ...s, index };
+        return show(customerAddresses(index, typed && found < 0 ? `Customer ${typed} not found.` : undefined));
       }
       if (s.screen === 'menuWindow') {
         const menu = (fields.get('11:38') ?? '').trim().toUpperCase();
@@ -196,6 +212,46 @@ export function orderEntry(message?: string): number[] {
     .text(22, 2, 'F3=Exit   F12=Cancel', BLUE);
   if (message) s.text(24, 2, message);
   return s.cursor(6, 22).readMdt().build();
+}
+
+/** Customers with a bill-to and a ship-to address, for the map component demo. */
+export const CUSTOMERS = [
+  {
+    number: '000123', name: 'Lakeside Hardware',
+    bill: ['233 S Wacker Dr', 'Chicago', 'IL', '60606'],
+    ship: ['1060 W Addison St', 'Chicago', 'IL', '60613'],
+  },
+  {
+    number: '000456', name: 'Harbor Supply Co',
+    bill: ['1 Ferry Building', 'San Francisco', 'CA', '94111'],
+    ship: ['24 Willie Mays Plaza', 'San Francisco', 'CA', '94107'],
+  },
+  {
+    number: '000789', name: 'Capitol Office Goods',
+    bill: ['1600 Pennsylvania Ave NW', 'Washington', 'DC', '20500'],
+    ship: ['350 Fifth Avenue', 'New York', 'NY', '10118'],
+  },
+];
+
+/**
+ * Customer addresses: bill-to on the left, ship-to on the right. The street is
+ * at column 4 or 44 of row 8, the city at row 9, then state and ZIP code.
+ */
+export function customerAddresses(index: number, message?: string): number[] {
+  const c = CUSTOMERS[index]!;
+  const s = new HostStream().clear().write()
+    .text(1, 2, 'CUS200')
+    .text(1, 31, 'Customer Addresses', WHITE)
+    .text(2, 2, 'Type a customer number, press Enter. Page Down for the next customer.', BLUE)
+    .text(4, 2, 'Customer . . . .').field(4, 22, 6, { value: c.number })
+    .text(4, 30, c.name, WHITE)
+    .text(6, 4, 'Bill to', WHITE).text(6, 44, 'Ship to', WHITE);
+  for (const [col, a] of [[4, c.bill], [44, c.ship]] as const) {
+    s.text(8, col, a[0]).text(9, col, a[1]).text(10, col, a[2]).text(10, col + 4, a[3]);
+  }
+  s.text(22, 2, 'F3=Exit   F12=Cancel', BLUE);
+  if (message) s.text(24, 2, message);
+  return s.cursor(4, 22).readMdt().build();
 }
 
 /** Help text for the order entry screen, by the row of the field, in pages of lines. */
@@ -283,6 +339,7 @@ function mainMenu(user: string, message?: string): number[] {
     .text(3, 2, 'Select one of the following:')
     .text(5, 6, '1. User tasks')
     .text(6, 6, '2. Order entry (field rules demo)')
+    .text(7, 6, '3. Customer addresses (map demo)')
     .text(8, 6, '4. Files, libraries, and folders')
     .text(10, 6, '6. Communications')
     .text(12, 6, '8. Problem handling')

@@ -382,10 +382,102 @@ export function mount(element, ctx) {
 ```
 
 A component that can't be loaded, or throws, is reported in the browser console, and a field
-it replaced gets its normal input back; the designer shows a note in its box. The demo has
-two examples in `packages/server/dev/components`: `bar-chart.js` (a column of a list) and
-`star-rating.js` (a one-digit field). Components run with the page's full rights, like
-designers' scripts, so only install code you have reviewed.
+it replaced gets its normal input back; the designer shows a note in its box. Components run
+with the page's full rights, like designers' scripts, so only install code you have reviewed.
+
+### Ready-made components
+
+Veneer comes with three components, in `examples/components/` of the release (in the
+repo: `packages/server/dev/components/`, which `npm run demo` uses):
+
+| Component | Shows |
+| --- | --- |
+| `map.js` | An address from the screen on a map ([below](#map-component)) |
+| `bar-chart.js` | A column of a list as a bar chart |
+| `star-rating.js` | A one-digit field as stars |
+
+To install one, copy it into the server's components folder (`VENEER_COMPONENTS_DIR`) and
+restart Veneer. On a server install, keep components outside the program directory, next
+to the configuration, so upgrades keep them:
+
+| Install | Components folder | Set in `veneer.env` |
+| --- | --- | --- |
+| IBM i | `/QOpenSys/etc/veneer/components` | `VENEER_COMPONENTS_DIR=/QOpenSys/etc/veneer/components` |
+| Linux | `/etc/veneer/components` | `VENEER_COMPONENTS_DIR=/etc/veneer/components` |
+| Docker | `/app/components`: mount a folder there, `-v ./components:/app/components:ro` | nothing |
+| Development | `components/` in the repo (git-ignored) | nothing |
+
+```sh
+# IBM i (QSH or SSH)
+mkdir -p /QOpenSys/etc/veneer/components
+cp /QOpenSys/opt/veneer/current/examples/components/map.js /QOpenSys/etc/veneer/components/
+```
+
+The service user needs to read the folder, not write it. An upgrade doesn't change your
+copy; to get a newer version of a component, copy it again from `examples/components/`.
+
+### Map component
+
+`map.js` shows an address from the screen on a map, with an **Open in maps** link to the
+full map in a new tab. Use it on any screen that shows an address: customers, ship-to
+addresses, warehouses, service calls. Several maps can share a screen, such as billing and
+shipping side by side. The demo's option 3, **Customer addresses**, has an example.
+
+**Add a map to one of your screens:**
+
+1. **Install** `map.js` (above).
+2. **Find the address on the screen.** Write down the row and column where each part
+   starts (rows and columns count from 1, as in screen definitions): for example, the street
+   at row 8, column 4, the city at row 9, column 4, and the state and ZIP code at row 10,
+   columns 4 and 8.
+3. **Place the map.** In the designer, open the screen, then the Page tab's **Components**
+   section, and add **Map**. Drag it to an empty area and drag its corner to size it; about
+   35 columns by 8 rows works well.
+4. **Set its options** (the JSON box on the Selected tab):
+   ```json
+   { "address": ["8:4", "9:4", "{10:4} {10:8}", "USA"], "title": "Ship to" }
+   ```
+5. In the designer the map stays blank until you click **Show map**, so the addresses of
+   the records you design with aren't sent to the map provider by accident. Click it to
+   check the map, then **Save**. Users see the map on the next screen.
+
+**Options:**
+
+| Option | |
+| --- | --- |
+| `address` | Required. The parts of the address, joined with commas. `"8:4"` is the field starting at row 8, column 4 (what the user has typed included), or else the screen text there up to the next double space. `"8:4:30"` takes exactly 30 characters. A part can mix positions and text, like `"{10:4} {10:8}"` (state and ZIP code on one line) or `"USA"` |
+| `title` | A caption above the map |
+| `provider` | `openstreetmap` (the default) or `google` |
+| `apiKey` | A Google Maps Embed API key, for `google`. Without one, Google's keyless embed is used |
+| `zoom` | 1 (the world) to 19 (a building). Default 15 (streets) |
+| `geocoder` | For `openstreetmap`: a Nominatim search address (`https://…`) to use instead of `nominatim.openstreetmap.org` |
+| `link` | `false` hides the **Open in maps** link |
+
+Fixed text such as `"USA"` never makes a map on its own: when every position in the address
+is blank (a new record, say), the map says there's no address. The map follows the screen:
+paging to the next record, or editing an address field, redraws it a moment after the
+address stops changing.
+
+**Choosing a provider:**
+
+- **OpenStreetMap** needs no key or account. It first finds the address's coordinates
+  with OpenStreetMap's Nominatim service, then shows the map. Nominatim is free for light
+  use: about one lookup a second for the whole site, and each address is looked up once per
+  page. For heavier use, run your own Nominatim (or a compatible service) and point
+  `geocoder` at it, or use Google.
+- **Google Maps** places the address itself, so there's no lookup step. Without `apiKey`,
+  Veneer uses Google's keyless embed, which works but is not an official API. For production
+  use, create a Maps Embed API key in the Google Cloud console, restrict it to your Veneer
+  site's address, and set `apiKey`.
+
+**Privacy:** the map provider receives every address shown in a map, and the user's
+browser connects to it directly. Check that this is acceptable for your data before turning
+maps on. Only the address is sent, never other fields from the screen.
+
+**Network and firewalls:** users' browsers (not the Veneer server) must reach the provider:
+`www.openstreetmap.org`, `tile.openstreetmap.org` and the geocoder for OpenStreetMap, or
+`www.google.com` and `maps.google.com` for Google. If your site adds a Content-Security-Policy
+in front of Veneer, allow those hosts in `frame-src`, and the geocoder in `connect-src`.
 
 ## Branding
 

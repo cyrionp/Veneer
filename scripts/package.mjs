@@ -42,6 +42,9 @@ fs.mkdirSync(stage, { recursive: true });
 
 for (const f of ['package.json', 'package-lock.json', 'LICENSE', 'README.md', 'deploy']) copy(f);
 copy('.env.example', 'veneer.env.example');
+// Ready-made components (map, bar chart, star rating): sites copy the ones they
+// want into their components folder (README, "Custom components").
+copy('packages/server/dev/components', 'examples/components');
 for (const pkg of ['tn5250', 'screens', 'server', 'client']) {
   copy(`packages/${pkg}/package.json`);
   copy(`packages/${pkg}/dist`);

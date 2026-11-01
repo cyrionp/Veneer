@@ -1,0 +1,14 @@
+{
+  "id": "demo-customer-addresses",
+  "name": "Demo customer addresses",
+  "match": {
+    "screenIds": ["120b83093ed6b8"],
+    "text": []
+  },
+  "changes": [
+    { "op": "component", "name": "map", "at": { "row": 12, "col": 4 }, "width": 36, "height": 9,
+      "options": { "address": ["8:4", "9:4", "{10:4} {10:8}", "USA"], "title": "Bill to" } },
+    { "op": "component", "name": "map", "at": { "row": 12, "col": 44 }, "width": 35, "height": 9,
+      "options": { "address": ["8:44", "9:44", "{10:44} {10:48}", "USA"], "title": "Ship to" } }
+  ]
+}

@@ -19,6 +19,7 @@ Installs are laid out so that upgrades never touch configuration or customizatio
 | Active version (symlink) | `/QOpenSys/opt/veneer/current` | `/opt/veneer/current` |
 | Configuration | `/QOpenSys/etc/veneer/veneer.env` | `/etc/veneer/veneer.env` |
 | Screen customizations | `/QOpenSys/etc/veneer/screens` | `/var/lib/veneer/screens` |
+| Components, if used (`VENEER_COMPONENTS_DIR`) | `/QOpenSys/etc/veneer/components` | `/etc/veneer/components` |
 | Recorded data (screen inventory) | `/QOpenSys/var/lib/veneer` | `/var/lib/veneer/data` |
 | Logs | `/QOpenSys/var/log/veneer/veneer.log` | the systemd journal (`journalctl -u veneer`) |
 
