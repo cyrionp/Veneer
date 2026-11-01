@@ -367,7 +367,15 @@ newest `ctx` it is given. `ctx` has:
 
 - `options`: the change's options.
 - `screen`: `{ id, definition, rows, cols, lines, fields }`, as for scripts.
-- `tables`: the lists on the screen, `{ row, col, columns, rows, more }`, with each cell as text.
+- `tables`: the lists on the screen, in screen order, including lists the definition hides
+  (so a component can take a list's place). Each is
+  `{ row, col, columns, rows, records, options, more, hidden }`: `columns` are the headings,
+  `rows` each row's cells as text, `options` the legend's options (`[{ value: "5", label:
+  "Display" }]`), `more` whether paging down shows more, and `hidden` whether the definition
+  hides it. `records` are the same rows with more detail: `{ row, cells, fields, option, role,
+  roles }`, where `fields` holds each cell's input field id (or `null`), `option` is the
+  row's option field id (or `null`), `role` the role a style rule gave the row, and `roles`
+  each cell's role. To pick an option on a row, `press('Enter', { [record.option]: '5' })`.
 - For a field: `field` (`{ id, length }`), `value` and `setValue(text)`, which types into it.
 - `getField(id)`, `setField(id, text)` and `press(key, fields?)`, which go through the
   same path as the user typing and pressing keys.
@@ -387,12 +395,13 @@ with the page's full rights, like designers' scripts, so only install code you h
 
 ### Ready-made components
 
-Veneer comes with three components, in `examples/components/` of the release (in the
+Veneer comes with four components, in `examples/components/` of the release (in the
 repo: `packages/server/dev/components/`, which `npm run demo` uses):
 
 | Component | Shows |
 | --- | --- |
 | `map.js` | An address from the screen on a map ([below](#map-component)) |
+| `cards.js` | A list as cards, one per row, with the list's options as buttons ([below](#card-view-component)) |
 | `bar-chart.js` | A column of a list as a bar chart |
 | `star-rating.js` | A one-digit field as stars |
 
@@ -478,6 +487,60 @@ maps on. Only the address is sent, never other fields from the screen.
 `www.openstreetmap.org`, `tile.openstreetmap.org` and the geocoder for OpenStreetMap, or
 `www.google.com` and `maps.google.com` for Google. If your site adds a Content-Security-Policy
 in front of Veneer, allow those hosts in `frame-src`, and the geocoder in `connect-src`.
+
+### Card view component
+
+`cards.js` shows a list (a subfile) as cards, one per row: a title, a subtitle and a few
+facts, with the list's options (`2=Change  5=Display`) as buttons. Lists of people, customers
+or items with a few key facts each read better this way than as rows. The demo's option 4,
+**Customer contacts**, has an example.
+
+**Show one of your lists as cards:**
+
+1. **Install** `cards.js` ([above](#ready-made-components)).
+2. **Hide the list.** In the designer, open the screen, select the list and tick **Hide**.
+   Also hide the option legend above it (each option, such as `2=Change`, is its own item)
+   and the **More** / **Bottom** marker under it, and the "Type options, press Enter." line if
+   you like. A hidden list isn't drawn, but its option fields are still on the screen,
+   and the cards type into them.
+3. **Place the cards.** In the Page tab's **Components** section, add **Cards**, and drag
+   and size it over the space the list and its legend used. Give it room: cards wrap into
+   as many columns as fit, and scroll if there are more rows than fit.
+4. **Set its options** (the JSON box on the Selected tab), naming columns by their headings:
+   ```json
+   { "title": "Name", "subtitle": "Company", "fields": ["City", "Phone", "Status"], "default": "5" }
+   ```
+5. **Save.** Users see cards on the next screen.
+
+**Options:**
+
+| Option | |
+| --- | --- |
+| `title` | The column for each card's title. Default: the first column after the option column |
+| `subtitle` | A column shown under the title |
+| `fields` | The columns shown on each card, in order, as "heading value". Default: every other column |
+| `actions` | Which options to offer as buttons, in order, by value: `["5", "2"]`. Default: all the legend's options. `[]` for none |
+| `default` | The option a click on a card, or Enter on it, runs: `"5"`. Default: none, so only the buttons do something |
+| `pager` | `false` hides the **Previous** and **Next** buttons |
+| `width` | The narrowest a card gets, in pixels (120 to 600). Default 220 |
+| `empty` | What to say when the list has no rows. Default "Nothing to show" |
+
+Headings are matched ignoring case. With several lists on a screen, the cards show the first
+one that has every column the options name (or the first list, if they name none).
+
+**What the user can do:** a button types its option into that row's option field and
+presses Enter, exactly as if the user had typed it, so the program sees nothing new.
+**Previous** and **Next** press Page Up and Page Down; **Next** shows only when the host says
+there is more. The keyboard works too: Tab reaches the cards, the arrow keys, Home and End
+move between them, and Enter runs `default`. After a press the buttons wait for the next
+screen, so a double click sends one key.
+
+**Colors:** [style rules](#screen-customizations-and-the-designer) carry over. A rule that
+colors a whole row colors that card's edge (a `danger` row gives a red card); a rule that
+colors one cell colors that fact; `muted` rows are faded.
+
+A list without an option legend still shows as cards, without buttons. In the designer the
+cards are drawn, but clicking them does nothing.
 
 ## Branding
 

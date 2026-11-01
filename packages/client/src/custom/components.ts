@@ -14,9 +14,10 @@
 // whoever runs the server can install them. A component that fails to load or
 // throws is reported in the console; a field it replaced gets its input back.
 
-import type { ComponentOptions } from '@veneer/screens';
+import type { ComponentOptions, Role } from '@veneer/screens';
 import type { AidName } from '@veneer/tn5250';
 import { useSyncExternalStore } from 'react';
+import type { ScreenView, TableItem } from '../transform/types.ts';
 import type { ScreenInfo } from './runtime.ts';
 
 /** A list on the screen, as text: a heading and a cell per column. */
@@ -24,9 +25,64 @@ export interface TableInfo {
   row: number;
   col: number;
   columns: string[];
+  /** Each row's cells as text (what the user typed, for input cells). */
   rows: string[][];
+  /** The same rows with where they are and what they hold, in the same order. */
+  records: TableRecord[];
+  /** The options from the list's legend ("2=Change  5=Display"); empty if it has none. */
+  options: Array<{ value: string; label: string }>;
   /** The host has more rows (paging down shows them). */
   more: boolean;
+  /** A customization hid the list (a component is taking its place). */
+  hidden: boolean;
+}
+
+/** One row of a list. */
+export interface TableRecord {
+  /** The screen row it is on. */
+  row: number;
+  cells: string[];
+  /** Each cell's input field id ("row:col"), or null for text. */
+  fields: Array<string | null>;
+  /** The field to type an option into ("2", "5"), when the list has an option column. */
+  option: string | null;
+  /** The row's role from a style rule (e.g. "danger"), or null. */
+  role: Role | null;
+  /** Each cell's role: from a style rule, or the host's color. */
+  roles: Role[];
+}
+
+/**
+ * The lists on a screen, as text, in screen order: those drawn and those a
+ * customization hid. Input cells hold the value on the screen.
+ */
+export function tablesOf(view: ScreenView): TableInfo[] {
+  const tables = [...view.items, ...(view.window?.items ?? []), ...(view.hiddenTables ?? [])]
+    .filter((i): i is TableItem => i.kind === 'table')
+    .sort((a, b) => a.row - b.row || a.col - b.col);
+  return tables.map((t) => {
+    const records = t.rows.map((r): TableRecord => {
+      const cells = r.cells.map((c) => (c.field?.value ?? c.text).trim());
+      return {
+        row: r.row,
+        cells,
+        fields: r.cells.map((c) => c.field?.id ?? null),
+        option: r.cells.find((c) => c.options && c.field && !c.field.bypass)?.field!.id ?? null,
+        role: r.role ?? null,
+        roles: r.cells.map((c) => c.role),
+      };
+    });
+    return {
+      row: t.row,
+      col: t.col,
+      columns: t.columns.map((c) => c.header.trim()),
+      rows: records.map((r) => r.cells),
+      records,
+      options: (t.rows.flatMap((r) => r.cells).find((c) => c.options)?.options ?? []).map((o) => ({ value: o.value, label: o.label })),
+      more: t.more,
+      hidden: !!t.hidden,
+    };
+  });
 }
 
 export interface ComponentContext {

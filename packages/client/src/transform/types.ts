@@ -173,5 +173,10 @@ export interface ScreenView {
   /** The definition's CSS and JavaScript (see custom/runtime.ts). */
   css?: string;
   scripts?: Partial<Record<ScreenEvent, string>>;
+  /**
+   * Lists a customization hid (not drawn, but still read by components, so a
+   * component such as cards can take a list's place).
+   */
+  hiddenTables?: TableItem[];
   snapshot: ScreenSnapshot;
 }

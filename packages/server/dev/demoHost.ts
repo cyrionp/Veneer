@@ -1,5 +1,6 @@
-// A fake IBM i for trying Veneer without one: sign-on, main menu and a
-// pageable Work with Active Jobs subfile. Any user and password sign on.
+// A fake IBM i for trying Veneer without one: sign-on, main menu, a pageable
+// Work with Active Jobs subfile, and screens for the demo customizations.
+// Any user and password sign on.
 
 import net from 'node:net';
 import { Attr, HostStream, buildRecord, getCodepage } from '@veneer/tn5250';
@@ -28,13 +29,33 @@ const JOBS = [
   ['ADMIN', 'QTMHHTTP', 'BCI', '.1', 'PGM-QZHBMAIN', 'SIGW'],
 ];
 
+/** The contacts list (cards demo): name, company, city, phone, status. */
+export const CONTACTS = [
+  ['Maria Gonzalez', 'Lakeside Hardware', 'Chicago', '312-555-0142', 'Active'],
+  ['James Okafor', 'Harbor Supply Co', 'San Francisco', '415-555-0198', 'Active'],
+  ['Priya Raman', 'Capitol Office Goods', 'Washington', '202-555-0117', 'On hold'],
+  ['Tom Becker', 'Becker & Sons', 'Milwaukee', '414-555-0163', 'Active'],
+  ['Aiko Tanaka', 'Pacific Imports', 'Seattle', '206-555-0181', 'Inactive'],
+  ['Luis Ortega', 'Desert Freight', 'Phoenix', '602-555-0129', 'Active'],
+  ['Hannah Novak', 'Prairie Seed Co', 'Omaha', '402-555-0175', 'On hold'],
+  ['Samuel Reed', 'Reed Plumbing', 'Atlanta', '404-555-0136', 'Active'],
+  ['Fatima Ali', 'Northstar Medical', 'Minneapolis', '612-555-0154', 'Active'],
+  ['Owen Price', 'Price Electric', 'Denver', '303-555-0108', 'Inactive'],
+  ['Grace Kim', 'Bluewater Marine', 'Tampa', '813-555-0190', 'Active'],
+];
+/** Contacts per page, rows 7 to 14. */
+export const CONTACTS_PAGE = 8;
+const CONTACT_OPTIONS: Record<string, string> = { '2': 'Change', '4': 'Delete', '5': 'Display' };
+
 type State =
   | { screen: 'signon' }
   | { screen: 'menu'; user: string }
   | { screen: 'menuWindow'; user: string }
   | { screen: 'order'; user: string }
-  | { screen: 'customer'; user: string; index: number }
+  /** `plain`: the same screen under another title, which no definition customizes. */
+  | { screen: 'customer'; user: string; index: number; plain: boolean }
   | { screen: 'jobs'; user: string; page: number }
+  | { screen: 'contacts'; user: string; page: number; plain: boolean }
   /** Help, shown from `back` (the screen Help was pressed on) about `topic`. */
   | { screen: 'help'; user: string; back: 'order' | 'menu'; topic: string; page: number };
 
@@ -109,9 +130,15 @@ export class DemoHost {
           state = { screen: 'order', user: s.user };
           return show(orderEntry());
         }
-        if (cmd === '3') {
-          state = { screen: 'customer', user: s.user, index: 0 };
-          return show(customerAddresses(0));
+        if (cmd === '3' || cmd === '5') {
+          const plain = cmd === '5';
+          state = { screen: 'customer', user: s.user, index: 0, plain };
+          return show(customerAddresses(0, undefined, plain));
+        }
+        if (cmd === '4' || cmd === '6') {
+          const plain = cmd === '6';
+          state = { screen: 'contacts', user: s.user, page: 0, plain };
+          return show(contacts(0, undefined, plain));
         }
         if (aid === 0x34 || cmd === '9') { // F4 or "Display a menu"
           state = { screen: 'menuWindow', user: s.user };
@@ -142,7 +169,32 @@ export class DemoHost {
           : aid === 0xf4 ? (s.index + CUSTOMERS.length - 1) % CUSTOMERS.length
           : (s.index + 1) % CUSTOMERS.length;
         state = { ...s, index };
-        return show(customerAddresses(index, typed && found < 0 ? `Customer ${typed} not found.` : undefined));
+        return show(customerAddresses(index, typed && found < 0 ? `Customer ${typed} not found.` : undefined, s.plain));
+      }
+      if (s.screen === 'contacts') {
+        if (aid === 0x3c || aid === 0x33) { state = { screen: 'menu', user: s.user }; return show(mainMenu(s.user)); }
+        const pages = Math.ceil(CONTACTS.length / CONTACTS_PAGE);
+        if (aid === 0xf5) {
+          if (s.page + 1 >= pages) return show(contacts(s.page, 'Already at bottom of area.', s.plain));
+          state = { ...s, page: s.page + 1 };
+          return show(contacts(s.page + 1, undefined, s.plain));
+        }
+        if (aid === 0xf4) {
+          if (s.page === 0) return show(contacts(0, 'Already at top of area.', s.plain));
+          state = { ...s, page: s.page - 1 };
+          return show(contacts(s.page - 1, undefined, s.plain));
+        }
+        const picked = [...fields].find(([, v]) => v.trim());
+        if (picked) {
+          const [id, typed] = picked;
+          const opt = typed.trim();
+          const contact = CONTACTS[s.page * CONTACTS_PAGE + (Number(id.split(':')[0]) - 7)];
+          const message = CONTACT_OPTIONS[opt] && contact
+            ? `${CONTACT_OPTIONS[opt]} ${contact[0]} (option ${opt}).`
+            : `Option ${opt} not valid.`;
+          return show(contacts(s.page, message, s.plain));
+        }
+        return show(contacts(s.page, undefined, s.plain));
       }
       if (s.screen === 'menuWindow') {
         const menu = (fields.get('11:38') ?? '').trim().toUpperCase();
@@ -237,11 +289,19 @@ export const CUSTOMERS = [
  * Customer addresses: bill-to on the left, ship-to on the right. The street is
  * at column 4 or 44 of row 8, the city at row 9, then state and ZIP code.
  */
-export function customerAddresses(index: number, message?: string): number[] {
+/** A title centered on the 80-column title row, as IBM i screens have them. */
+const centered = (title: string) => Math.floor((80 - title.length) / 2) + 1;
+
+/**
+ * Customer Addresses (CUS200). `plain` gives it another title, so the demo's
+ * map definition doesn't match it: the screen as it looks without the maps.
+ */
+export function customerAddresses(index: number, message?: string, plain = false): number[] {
   const c = CUSTOMERS[index]!;
+  const title = plain ? 'Customer Addresses (no map)' : 'Customer Addresses';
   const s = new HostStream().clear().write()
     .text(1, 2, 'CUS200')
-    .text(1, 31, 'Customer Addresses', WHITE)
+    .text(1, plain ? centered(title) : 31, title, WHITE)
     .text(2, 2, 'Type a customer number, press Enter. Page Down for the next customer.', BLUE)
     .text(4, 2, 'Customer . . . .').field(4, 22, 6, { value: c.number })
     .text(4, 30, c.name, WHITE)
@@ -340,8 +400,9 @@ function mainMenu(user: string, message?: string): number[] {
     .text(5, 6, '1. User tasks')
     .text(6, 6, '2. Order entry (field rules demo)')
     .text(7, 6, '3. Customer addresses (map demo)')
-    .text(8, 6, '4. Files, libraries, and folders')
-    .text(10, 6, '6. Communications')
+    .text(8, 6, '4. Customer contacts (cards demo)')
+    .text(9, 6, '5. Customer addresses without the maps')
+    .text(10, 6, '6. Customer contacts without the cards')
     .text(12, 6, '8. Problem handling')
     .text(13, 6, '9. Display a menu')
     .text(14, 5, '10. Information Assistant options')
@@ -385,6 +446,35 @@ function jobs(page: number, message?: string): number[] {
     .text(23, 2, 'F3=Exit   F5=Refresh   F7=Find   F10=Restart statistics   F12=Cancel', BLUE);
   if (message) s.text(24, 2, message);
   return s.cursor(11, 3).readMdt().build();
+}
+
+/**
+ * Work with Contacts (CON100): a subfile with an option column, paged 8 at a
+ * time. `plain` gives it another title, so the cards definition doesn't match it.
+ */
+export function contacts(page: number, message?: string, plain = false): number[] {
+  const title = plain ? 'Work with Contacts (no cards)' : 'Work with Contacts';
+  const s = new HostStream().clear().write()
+    .text(1, 2, 'CON100')
+    .text(1, plain ? centered(title) : 31, title, WHITE)
+    .text(1, 72, 'VENEER')
+    .text(3, 2, 'Type options, press Enter.', BLUE)
+    .text(4, 3, '2=Change   4=Delete   5=Display', BLUE)
+    .text(6, 2, 'Opt  Name             Company               City          Phone        Status', WHITE);
+  CONTACTS.slice(page * CONTACTS_PAGE, (page + 1) * CONTACTS_PAGE).forEach(([name, company, city, phone, status], i) => {
+    const row = 7 + i;
+    s.field(row, 3, 2)
+      .text(row, 7, name!)
+      .text(row, 24, company!)
+      .text(row, 46, city!)
+      .text(row, 60, phone!)
+      .text(row, 73, status!);
+  });
+  const last = (page + 1) * CONTACTS_PAGE >= CONTACTS.length;
+  s.text(15, 73, last ? 'Bottom' : 'More...')
+    .text(22, 2, 'F3=Exit   F5=Refresh   F12=Cancel', BLUE);
+  if (message) s.text(24, 2, message);
+  return s.cursor(7, 3).readMdt().build();
 }
 
 /** Split inbound bytes into 5250 records, dropping Telnet negotiation. */

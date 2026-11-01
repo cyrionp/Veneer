@@ -1,13 +1,19 @@
 // The demo's screen definitions (dev/screens) still fit the demo host's
-// screens, and the map demo reads the addresses the host shows.
+// screens: the map demo reads the addresses the host shows, and the cards demo
+// shows the contacts list and runs its options against the demo host.
 
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { test } from 'node:test';
 import { matchScreen, validateDefinition, type ScreenDefinition } from '@veneer/screens';
-import { Terminal, buildRecord, getCodepage, snapshot, type ScreenSnapshot } from '@veneer/tn5250';
+import { Session, Terminal, buildRecord, getCodepage, snapshot, type ScreenSnapshot } from '@veneer/tn5250';
+// The browser's view of a screen, as the client builds it for components.
+import { tablesOf } from '../../client/src/custom/components.ts';
+import { customize } from '../../client/src/transform/customize.ts';
+import { transform } from '../../client/src/transform/index.ts';
+import * as cards from '../dev/components/cards.js';
 import * as map from '../dev/components/map.js';
-import { CUSTOMERS, customerAddresses, orderEntry } from '../dev/demoHost.ts';
+import { CONTACTS, CONTACTS_PAGE, CUSTOMERS, DemoHost, contacts, customerAddresses, orderEntry } from '../dev/demoHost.ts';
 
 const cp = getCodepage(37);
 const screensDir = new URL('../dev/screens/', import.meta.url);
@@ -60,4 +66,137 @@ test('the maps fit on the screen without covering the addresses', () => {
     assert.ok(c.at.row + c.height - 1 < 22, 'above the function keys');
     assert.ok(c.at.col + c.width - 1 <= 80, 'within 80 columns');
   }
+});
+
+// ---- the cards demo
+
+const contactsDef = () => definitions.find((d) => d.id === 'demo-contacts')!;
+const cardSettings = () => cards.settings((contactsDef().changes.find((c) => c.op === 'component') as { options: unknown }).options);
+/** The lists a component on the contacts screen sees. */
+const contactTables = (snap: ScreenSnapshot) => tablesOf(customize(transform(snap), contactsDef()));
+
+test('the contacts definition matches every page of contacts', () => {
+  const pages = Math.ceil(CONTACTS.length / CONTACTS_PAGE);
+  assert.ok(pages >= 2, 'the demo pages');
+  for (let p = 0; p < pages; p++) assert.equal(matchScreen(screen(contacts(p)), definitions)?.id, 'demo-contacts');
+});
+
+test('the cards show the contacts in place of the hidden list, legend and More...', () => {
+  const snap = screen(contacts(0));
+  const view = customize(transform(snap), contactsDef());
+  assert.equal(view.items.some((i) => i.kind === 'table'), false, 'the list is hidden');
+  const drawn = JSON.stringify(view.items);
+  assert.doesNotMatch(drawn, /2=Change|Type options|More/, 'so are its legend and marker');
+  const [list] = tablesOf(view);
+  assert.ok(list?.hidden);
+  assert.deepEqual(list.options.map((o) => o.value), ['2', '4', '5']);
+  const shown = cards.cardsOf(cards.pickTable([list], cardSettings()), cardSettings());
+  assert.deepEqual(shown.map((c) => c.title), CONTACTS.slice(0, CONTACTS_PAGE).map((c) => c[0]));
+  assert.equal(shown[0]!.subtitle, 'Lakeside Hardware');
+  assert.deepEqual(shown[0]!.facts.map((f) => f.value), ['Chicago', '312-555-0142', 'Active']);
+  assert.deepEqual(shown.map((c) => c.record.option), CONTACTS.slice(0, CONTACTS_PAGE).map((_, i) => `${7 + i}:3`));
+  assert.equal(cards.defaultAction(list, cardSettings())?.label, 'Display');
+});
+
+test('the demo\'s style rules mark contacts on hold and inactive', () => {
+  const shown = cards.cardsOf(contactTables(screen(contacts(0)))[0]!, cardSettings());
+  const byName = new Map(shown.map((c) => [c.title, c.role]));
+  assert.equal(byName.get('Priya Raman'), 'warning', 'on hold');
+  assert.equal(byName.get('Aiko Tanaka'), 'muted', 'inactive');
+  assert.equal(byName.get('Maria Gonzalez'), '');
+});
+
+test('the cards box covers the list and stays above the function keys', () => {
+  const box = contactsDef().changes.find((c) => c.op === 'component')!;
+  assert.ok(box.op === 'component');
+  assert.ok(box.at.row <= 3 && box.at.row + box.height - 1 >= 15, 'from the legend to More...');
+  assert.ok(box.at.row + box.height - 1 < 22);
+  assert.ok(box.at.col + box.width - 1 <= 80);
+});
+
+test('against the demo host, a card\'s option and the pager do what the user would', async (t) => {
+  const host = new DemoHost();
+  const port = await host.listen();
+  const session = new Session({ host: '127.0.0.1', port, connectTimeoutMs: 5000 });
+  t.after(() => { session.close(); host.server.close(); });
+  await session.connect();
+  await session.waitForInput(5000);
+  const send = async (aid: Parameters<Session['submit']>[0]['aid'], fields?: Record<string, string>) => {
+    session.submit({ aid, ...(fields ? { fields } : {}) });
+    return session.waitForInput(5000);
+  };
+  await send('Enter', { '6:53': 'DEMO' });
+  let snap = await send('Enter', { '20:7': '4' });
+
+  // What the component does, with ctx.press going to the host.
+  const ctx = { press: (aid: Parameters<Session['submit']>[0]['aid'], fields?: Record<string, string>) => { pending = send(aid, fields); } };
+  let pending: Promise<ScreenSnapshot> | undefined;
+  const cardsNow = () => cards.cardsOf(contactTables(snap)[0]!, cardSettings());
+
+  const james = cardsNow().find((c) => c.title === 'James Okafor')!;
+  assert.equal(cards.run(ctx, james.record, '5'), true);
+  snap = await pending!;
+  assert.match(snap.lines[23]!, /Display James Okafor \(option 5\)/);
+
+  ctx.press('PageDown');
+  snap = await pending!;
+  assert.deepEqual(cardsNow().map((c) => c.title), CONTACTS.slice(CONTACTS_PAGE).map((c) => c[0]));
+  assert.equal(contactTables(snap)[0]!.more, false, 'no Next on the last page');
+
+  const last = cardsNow().at(-1)!;
+  cards.run(ctx, last.record, '2');
+  snap = await pending!;
+  assert.match(snap.lines[23]!, new RegExp(`Change ${CONTACTS.at(-1)![0]}`));
+
+  ctx.press('PageUp');
+  snap = await pending!;
+  assert.equal(cardsNow()[0]!.title, 'Maria Gonzalez');
+});
+
+// ---- options 5 and 6: the same screens without the components
+
+test('the plain customer addresses and contacts screens match no definition', () => {
+  CUSTOMERS.forEach((_, i) => assert.equal(matchScreen(screen(customerAddresses(i, undefined, true)), definitions), undefined));
+  for (let p = 0; p < Math.ceil(CONTACTS.length / CONTACTS_PAGE); p++) {
+    assert.equal(matchScreen(screen(contacts(p, undefined, true)), definitions), undefined);
+  }
+});
+
+test('the plain screens show the same data as the customized ones', () => {
+  const body = (snap: ScreenSnapshot) => snap.lines.slice(1);
+  assert.deepEqual(body(screen(customerAddresses(1, undefined, true))), body(screen(customerAddresses(1))));
+  assert.deepEqual(body(screen(contacts(1, undefined, true))), body(screen(contacts(1))));
+  assert.match(screen(contacts(0, undefined, true)).lines[0]!, /Work with Contacts \(no cards\)/);
+  assert.match(screen(customerAddresses(0, undefined, true)).lines[0]!, /Customer Addresses \(no map\)/);
+});
+
+test('on the demo host, options 5 and 6 open the plain screens, and they page like the others', async (t) => {
+  const host = new DemoHost();
+  const port = await host.listen();
+  const session = new Session({ host: '127.0.0.1', port, connectTimeoutMs: 5000 });
+  t.after(() => { session.close(); host.server.close(); });
+  await session.connect();
+  await session.waitForInput(5000);
+  const send = (aid: Parameters<Session['submit']>[0]['aid'], fields?: Record<string, string>) => {
+    session.submit({ aid, ...(fields ? { fields } : {}) });
+    return session.waitForInput(5000);
+  };
+  let snap = await send('Enter', { '6:53': 'DEMO' });
+  assert.match(snap.lines.join('\n'), /5\. Customer addresses without the maps/);
+  assert.match(snap.lines.join('\n'), /6\. Customer contacts without the cards/);
+
+  snap = await send('Enter', { '20:7': '5' });
+  assert.match(snap.lines[0]!, /\(no map\)/);
+  snap = await send('PageDown');
+  assert.match(snap.lines[0]!, /\(no map\)/, 'still plain after paging');
+  assert.match(snap.lines[3]!, new RegExp(CUSTOMERS[1]!.name));
+  await send('F3');
+
+  snap = await send('Enter', { '20:7': '6' });
+  assert.match(snap.lines[0]!, /\(no cards\)/);
+  snap = await send('PageDown');
+  assert.match(snap.lines[0]!, /\(no cards\)/);
+  snap = await send('Enter', { [`7:3`]: '5' });
+  assert.match(snap.lines[23]!, new RegExp(`Display ${CONTACTS[CONTACTS_PAGE]![0]}`));
+  assert.match(snap.lines[0]!, /\(no cards\)/);
 });

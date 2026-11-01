@@ -2,7 +2,7 @@
 // found by their screen position, so changes survive data changing on screen.
 
 import { conditionTester, type Change, type ScreenDefinition, type Target } from '@veneer/screens';
-import type { ComponentItem, HtmlItem, Item, ScreenView } from './types.ts';
+import type { ComponentItem, HtmlItem, Item, ScreenView, TableItem } from './types.ts';
 
 export interface CustomizeOptions {
   /** Designer mode: keep hidden items (marked hidden) so they can be selected. */
@@ -138,6 +138,8 @@ export function customize(view: ScreenView, def: ScreenDefinition | undefined, o
   }
 
   if (!opts.design) {
+    const hiddenTables = all().filter((i): i is TableItem => i.kind === 'table' && !!i.hidden);
+    if (hiddenTables.length > 0) out.hiddenTables = hiddenTables;
     out.items = out.items.filter((i) => !i.hidden);
     out.meta = out.meta.filter((m) => !m.hidden);
     if (out.window) out.window.items = out.window.items.filter((i) => !i.hidden);

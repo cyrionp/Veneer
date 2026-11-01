@@ -1,0 +1,20 @@
+{
+  "id": "demo-contacts",
+  "name": "Demo contacts",
+  "match": {
+    "screenIds": ["199a087c30f337"],
+    "text": []
+  },
+  "changes": [
+    { "op": "hide", "at": { "row": 3, "col": 2 } },
+    { "op": "hide", "at": { "row": 4, "col": 3 } },
+    { "op": "hide", "at": { "row": 4, "col": 14 } },
+    { "op": "hide", "at": { "row": 4, "col": 25 } },
+    { "op": "hide", "at": { "row": 6, "col": 2 } },
+    { "op": "hide", "at": { "row": 15, "col": 73 } },
+    { "op": "style", "when": { "column": "Status", "equals": "On hold" }, "role": "warning", "target": "row" },
+    { "op": "style", "when": { "column": "Status", "equals": "Inactive" }, "role": "muted", "target": "row" },
+    { "op": "component", "name": "cards", "at": { "row": 3, "col": 2 }, "width": 79, "height": 19,
+      "options": { "title": "Name", "subtitle": "Company", "fields": ["City", "Phone", "Status"], "default": "5" } }
+  ]
+}

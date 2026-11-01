@@ -4,21 +4,10 @@
 
 import { screenId } from '@veneer/screens';
 import { useEffect, useMemo, useRef, type CSSProperties } from 'react';
-import { componentFailed, mountComponent, useComponents, type ComponentContext, type ComponentInstance, type TableInfo } from '../custom/components.ts';
+import { componentFailed, mountComponent, tablesOf, useComponents, type ComponentContext, type ComponentInstance } from '../custom/components.ts';
 import { screenInfo, veneer } from '../custom/runtime.ts';
 import type { ComponentItem, ScreenView } from '../transform/types.ts';
 import type { FieldBinding } from './fieldInput.tsx';
-
-/** The lists on a screen, as text. */
-export function tablesOf(view: ScreenView): TableInfo[] {
-  return [...view.items, ...(view.window?.items ?? [])].flatMap((i) => (i.kind !== 'table' ? [] : [{
-    row: i.row,
-    col: i.col,
-    columns: i.columns.map((c) => c.header.trim()),
-    rows: i.rows.map((r) => r.cells.map((c) => (c.field?.value ?? c.text).trim())),
-    more: i.more,
-  }]));
-}
 
 export function ComponentBox({ item, view, binding, design, className, style, dataAt }: {
   item: ComponentItem;
