@@ -97,14 +97,12 @@ test('saves site-wide CSS and JavaScript to global.css and global.js', async () 
   assert.equal(fs.readFileSync(path.join(dir, 'global.js'), 'utf8'), 'console.log(1)\n');
   assert.equal(fs.readFileSync(path.join(dir, 'global-screen.js'), 'utf8'), 'console.log(2)\n');
   const list = await (await fetch(`http://${base}/api/screens`)).json();
-  assert.deepEqual(list.site, { css: 'body { color: red }', scripts, style: { look: 'default' } });
-  assert.ok(!fs.existsSync(path.join(dir, 'global.style.json')), 'the default style is not written');
+  assert.deepEqual(list.site, { css: 'body { color: red }', scripts });
 
-  const style = { look: 'soft', accent: '#0a7f5a', density: 'compact' };
-  assert.equal((await save({ css: 'body { color: red }', scripts, style })).status, 200);
-  assert.deepEqual(JSON.parse(fs.readFileSync(path.join(dir, 'global.style.json'), 'utf8')), style);
-  assert.deepEqual((await (await fetch(`http://${base}/api/screens`)).json()).site.style, style);
-  assert.equal((await save({ css: '', scripts, style: { look: 'neon' } })).status, 400);
+  // A designer page opened before themes still sends a style: it is ignored, not saved.
+  assert.equal((await save({ css: 'body { color: red }', scripts, style: { look: 'soft' } })).status, 200);
+  assert.ok(!fs.existsSync(path.join(dir, 'global.style.json')), 'styles are themes now');
+  assert.equal((await (await fetch(`http://${base}/api/screens`)).json()).site.style, undefined);
 
   assert.equal((await save({ css: '', scripts: {} })).status, 200);
   assert.ok(!fs.existsSync(path.join(dir, 'global.css')), 'empty file removed');
@@ -145,22 +143,18 @@ test('definitions on disk are loaded at startup', async () => {
   await other.close();
 });
 
-test('the saved style is loaded at startup, not as a screen; an invalid one is ignored', async () => {
-  const start = async (style: string) => {
-    const d = fs.mkdtempSync(path.join(os.tmpdir(), 'veneer-api-'));
-    fs.writeFileSync(path.join(d, 'global.style.json'), style);
-    const s = createServer({
-      listenHost: '127.0.0.1', listenPort: 0, host: { host: '127.0.0.1', port: 1, tls: false },
-      idleTimeoutMs: 0, resumeGraceMs: 0, maxSessions: 1, allowedOrigins: [], screensDir: d,
-    });
-    const list = await (await fetch(`http://127.0.0.1:${(await s.listen()).port}/api/screens`)).json();
-    await s.close();
-    return list;
-  };
-  const good = await start(JSON.stringify({ look: 'green', corners: 'square' }));
-  assert.deepEqual(good.site.style, { look: 'green', corners: 'square' });
-  assert.deepEqual(good.screens, []);
-  assert.deepEqual((await start('{"look": "neon"}')).site.style, { look: 'default' });
+test('a style saved before themes is not read as a screen', async () => {
+  const d = fs.mkdtempSync(path.join(os.tmpdir(), 'veneer-api-'));
+  fs.writeFileSync(path.join(d, 'global.style.json'), JSON.stringify({ look: 'green', corners: 'square' }));
+  const s = createServer({
+    listenHost: '127.0.0.1', listenPort: 0, host: { host: '127.0.0.1', port: 1, tls: false },
+    idleTimeoutMs: 0, resumeGraceMs: 0, maxSessions: 1, allowedOrigins: [], screensDir: d,
+  });
+  const list = await (await fetch(`http://127.0.0.1:${(await s.listen()).port}/api/screens`)).json();
+  await s.close();
+  assert.deepEqual(list.screens, []);
+  assert.equal(list.site.style, undefined);
+  assert.equal(list.theme.name, 'site', 'it became a theme (themes.test.ts)');
 });
 
 /** A request with headers fetch() won't let us set (Host). */

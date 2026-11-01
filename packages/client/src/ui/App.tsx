@@ -17,9 +17,9 @@ import { DropMenu, ExportMenu, type ExportFormat } from './ExportMenu.tsx';
 import { HelpPopover } from './HelpPopover.tsx';
 import type { FieldBinding } from './fieldInput.tsx';
 import { keyAction, keyHint, typedKey } from './keys.ts';
-import { useBrand } from './brand.ts';
+import { DEFAULT_BRAND, useBrand } from './brand.ts';
 import { checkFields } from './fieldRules.ts';
-import { applyStyle } from './looks.ts';
+import { applyTheme, useThemeLogo } from './themes.ts';
 import { ModernScreen, revealField, type BoxKind } from './ModernScreen.tsx';
 import { MAX_TYPEAHEAD, caretAtCursor, caretPosition, replay, type Caret, type ReplayResult, type TypedKey } from './typeahead.ts';
 import { useScreens } from './useScreens.ts';
@@ -40,8 +40,18 @@ export function App() {
   const seq = session.screen?.seq ?? 0;
   const [mode, setMode] = useState<Mode>(loadMode);
   const screens = useScreens(session.screensVersion);
-  // The site's style; the designer previews its draft while the panel is open.
-  useEffect(() => { applyStyle(screens.site?.style); }, [screens.site]);
+  // The site's theme; the designer previews a draft while its Themes tab is open.
+  useEffect(() => { applyTheme(screens.theme); }, [screens.theme]);
+  const themeLogo = useThemeLogo();
+  // The tab icon follows the logo: the theme's, else the brand's.
+  useEffect(() => {
+    if (!brand) return;
+    const icon = themeLogo ?? (brand.logo !== DEFAULT_BRAND.logo ? brand.logo : null);
+    const link = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
+    if (!link) return;
+    link.dataset.veneerIcon ??= link.getAttribute('href') ?? '';
+    link.setAttribute('href', icon ?? link.dataset.veneerIcon);
+  }, [themeLogo, brand]);
   const definition = useMemo(() => (snap ? matchScreen(snap, screens.screens) : undefined), [snap, screens.screens]);
 
   // Designer: a draft definition previewed live in place of the matched one,
@@ -536,7 +546,7 @@ export function App() {
       {mode === 'modern' && screenView?.css && <style>{screenView.css}</style>}
       <div className={`busy-bar${busy ? ' on' : ''}`} aria-hidden />
       <header className="topbar">
-        {brand ? <img className="brand" src={brand.logo} alt={brand.name} /> : <span className="brand" />}
+        {brand ? <img className="brand" src={themeLogo ?? brand.logo} alt={brand.name} /> : <span className="brand" />}
         <div className="titles">
           <h1>{(mode === 'modern' && screenView?.title) || brand?.name}</h1>
           {mode === 'modern' && screenView && screenView.meta.length > 0 && (
@@ -673,6 +683,7 @@ export function App() {
           selection={selection}
           definitions={screens.screens}
           site={screens.site ?? { css: '', scripts: { load: '', screen: '' } }}
+          theme={screens.theme}
           components={screens.components}
           onSelect={setSelectedAt}
           clickedAt={selectedAt}

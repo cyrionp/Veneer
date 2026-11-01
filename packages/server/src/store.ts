@@ -1,13 +1,13 @@
 // Screen definitions on disk: one <id>.json per screen, so they can be
 // versioned in git. Invalid files are skipped with a warning. Site-wide CSS and
 // JavaScript live beside them: global.css, global.js (page load) and
-// global-screen.js (every screen), and the style chosen in the designer:
-// global.style.json (the dot keeps it apart from screen ids).
+// global-screen.js (every screen). Themes are in themes/ (themes.ts);
+// global.style.json, the style saved before themes, is not a screen.
 
 import { EventEmitter } from 'node:events';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { DefinitionError, ID_PATTERN, validateDefinition, validateSite, validateStyle, type ScreenDefinition, type SiteCustomization, type SiteStyle } from '@veneer/screens';
+import { DefinitionError, ID_PATTERN, validateDefinition, validateSite, type ScreenDefinition, type SiteCustomization } from '@veneer/screens';
 import { log } from './log.ts';
 
 const STYLE_FILE = 'global.style.json';
@@ -29,7 +29,6 @@ export class ScreenStore extends EventEmitter<{ changed: [number] }> {
     this.site = {
       css: await this.readSite('global.css'),
       scripts: { load: await this.readSite('global.js'), screen: await this.readSite('global-screen.js') },
-      style: await this.readStyle(),
     };
     let names: string[];
     try {
@@ -74,7 +73,6 @@ export class ScreenStore extends EventEmitter<{ changed: [number] }> {
     await this.writeSite('global.css', site.css);
     await this.writeSite('global.js', site.scripts.load);
     await this.writeSite('global-screen.js', site.scripts.screen);
-    await this.writeSite(STYLE_FILE, isDefaultStyle(site.style) ? '' : JSON.stringify(site.style, null, 2));
     this.site = site;
     this.bump();
     return site;
@@ -86,18 +84,6 @@ export class ScreenStore extends EventEmitter<{ changed: [number] }> {
     } catch (err) {
       if ((err as NodeJS.ErrnoException).code === 'ENOENT') return '';
       throw err;
-    }
-  }
-
-  /** The saved style; an invalid file is reported and the default look used. */
-  private async readStyle(): Promise<SiteStyle> {
-    const text = await this.readSite(STYLE_FILE);
-    if (!text) return { look: 'default' };
-    try {
-      return validateStyle(JSON.parse(text));
-    } catch (err) {
-      log.warn('ignoring invalid style', { file: STYLE_FILE, error: (err as Error).message });
-      return { look: 'default' };
     }
   }
 
@@ -122,12 +108,13 @@ export class ScreenStore extends EventEmitter<{ changed: [number] }> {
     return path.join(this.dir, `${id}.json`);
   }
 
+  /** Something pages show besides the definitions changed (the theme): tell clients to reload. */
+  touch(): void {
+    this.bump();
+  }
+
   private bump(): void {
     this.version++;
     this.emit('changed', this.version);
   }
-}
-
-function isDefaultStyle(style: SiteStyle | undefined): boolean {
-  return !style || (style.look === 'default' && Object.keys(style).length === 1);
 }

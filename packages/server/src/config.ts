@@ -29,6 +29,8 @@ export interface ServerConfig {
   screensDir: string;
   /** Directory of custom component modules (served at /components/); unset means none. */
   componentsDir?: string;
+  /** Where the built-in themes are; tests use a copy. Default: packages/server/themes. */
+  builtinThemesDir?: string;
   /** Directory for what Veneer records itself (the screen inventory); unset keeps it in memory. */
   dataDir?: string;
   /** Bearer token for saving definitions from the designer. */

@@ -158,15 +158,16 @@ export type ScreenEvent = (typeof SCREEN_EVENTS)[number];
 export const SITE_EVENTS = ['load', 'screen'] as const;
 export type SiteEvent = (typeof SITE_EVENTS)[number];
 
-/** Site-wide CSS and JavaScript (global.css, global.js and global-screen.js), and the style. */
+/** Site-wide CSS and JavaScript (global.css, global.js and global-screen.js). The look is the theme (themes.ts). */
 export interface SiteCustomization {
   css: string;
   scripts: Record<SiteEvent, string>;
-  /** Chosen in the designer (global.style.json); missing means the default look. */
-  style?: SiteStyle;
 }
 
-/** Base looks for every page (client ui/looks.css). */
+/**
+ * The designer's old Style section, saved as global.style.json before themes.
+ * Only read now, to turn a saved style into a theme when a site upgrades.
+ */
 export const LOOKS = ['default', 'compact', 'flat', 'green', 'soft'] as const;
 export type Look = (typeof LOOKS)[number];
 export const CORNERS = ['square', 'round'] as const;

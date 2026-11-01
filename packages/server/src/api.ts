@@ -1,20 +1,22 @@
-// /api: screen definitions for the client, editing for the designer, and
-// /api/admin for the admin page.
+// /api: screen definitions and the theme for the client, editing for the
+// designer (definitions, site code, themes), and /api/admin for the admin page.
 
 import { createHash, timingSafeEqual } from 'node:crypto';
 import type http from 'node:http';
-import { DefinitionError, ID_PATTERN } from '@veneer/screens';
+import { DefinitionError, ID_PATTERN, MAX_THEME_FILE } from '@veneer/screens';
 import { log, recentProblems } from './log.ts';
 import { listComponents } from './components.ts';
 import type { ScreenInventory } from './inventory.ts';
 import type { SessionManager } from './sessions.ts';
 import type { ScreenStore } from './store.ts';
+import { ThemeError, type ThemeStore } from './themes.ts';
 import { brandInfo, type Brand } from './brand.ts';
 
 const MAX_BODY = 1024 * 1024;
 
 export interface ApiOptions {
   store: ScreenStore;
+  themes?: ThemeStore | undefined;
   inventory?: ScreenInventory | undefined;
   /** Bearer token required to change definitions. */
   designerToken?: string | undefined;
@@ -74,7 +76,12 @@ async function route(req: http.IncomingMessage, res: http.ServerResponse, pathna
     return json(res, 200, { designer: access !== 'off', tokenRequired: access === 'token', brand: brandInfo(opts.brand ?? {}) });
   }
   if (pathname === '/api/screens' && req.method === 'GET') {
-    return json(res, 200, { version: store.version, screens: store.list(), site: store.site });
+    const theme = opts.themes ? await opts.themes.activeTheme() : undefined;
+    return json(res, 200, { version: store.version, screens: store.list(), site: store.site, ...(theme ? { theme } : {}) });
+  }
+
+  if ((pathname === '/api/theme' || pathname === '/api/themes' || pathname.startsWith('/api/themes/')) && opts.themes) {
+    return themes(req, res, pathname, opts.themes, opts);
   }
 
   if (pathname === '/api/components' && req.method === 'GET') {
@@ -139,6 +146,107 @@ async function route(req: http.IncomingMessage, res: http.ServerResponse, pathna
   } catch (err) {
     if (err instanceof DefinitionError) return json(res, 400, { error: err.message });
     throw err;
+  }
+}
+
+/**
+ * The designer's theme editing:
+ *   GET    /api/themes                       every theme, and the one in use
+ *   POST   /api/themes                       {name, from}: a new theme, copied from another
+ *   GET    /api/themes/<name>                a theme with its style sheet and images
+ *   PUT    /api/themes/<name>                {css}: save its style sheet
+ *   DELETE /api/themes/<name>                delete it (not the one in use)
+ *   POST   /api/themes/<name>/rename         {to}
+ *   PUT    /api/themes/<name>/files/<file>   the image, as the body
+ *   DELETE /api/themes/<name>/files/<file>
+ *   PUT    /api/theme                        {name}: use it for everyone
+ */
+async function themes(req: http.IncomingMessage, res: http.ServerResponse, pathname: string, store: ThemeStore, opts: ApiOptions): Promise<void> {
+  if (!allowed(req, res, designerRole(opts))) return;
+  const parts = pathname.split('/').slice(3).map((p) => {
+    try { return decodeURIComponent(p); } catch { return '\u0000'; }
+  });
+  const [name, sub, file] = parts;
+  const method = req.method ?? 'GET';
+  const refuse = () => json(res, 405, { error: 'Method not allowed' });
+  try {
+    if (pathname === '/api/theme') {
+      if (method !== 'PUT') return refuse();
+      const body = await jsonBody(req, res);
+      if (body === undefined) return;
+      await store.setActive((body as { name?: unknown } | null)?.name as string);
+      log.info('theme set for everyone', { theme: store.active });
+      return json(res, 200, { active: store.active });
+    }
+    if (name === undefined) {
+      if (method === 'GET') return json(res, 200, { active: store.active, themes: await store.list() });
+      if (method !== 'POST') return refuse();
+      const body = (await jsonBody(req, res)) as { name?: unknown; from?: unknown } | null | undefined;
+      if (body === undefined) return;
+      const theme = await store.create(body?.name as string, typeof body?.from === 'string' ? body.from : 'default');
+      log.info('theme created', { theme: theme.name, from: body?.from });
+      return json(res, 201, theme);
+    }
+    if (sub === undefined) {
+      if (method === 'GET') {
+        const theme = await store.get(name);
+        return theme ? json(res, 200, theme) : json(res, 404, { error: `No theme named "${name.slice(0, 40)}"` });
+      }
+      if (method === 'PUT') {
+        const body = await jsonBody(req, res);
+        if (body === undefined) return;
+        const theme = await store.saveCss(name, (body as { css?: unknown } | null)?.css);
+        log.info('theme saved', { theme: name, css: theme.css.length });
+        return json(res, 200, theme);
+      }
+      if (method === 'DELETE') {
+        await store.remove(name);
+        log.info('theme deleted', { theme: name });
+        return void res.writeHead(204).end();
+      }
+      return refuse();
+    }
+    if (sub === 'rename' && file === undefined) {
+      if (method !== 'POST') return refuse();
+      const body = await jsonBody(req, res);
+      if (body === undefined) return;
+      const theme = await store.rename(name, (body as { to?: unknown } | null)?.to as string);
+      log.info('theme renamed', { from: name, to: theme.name });
+      return json(res, 200, theme);
+    }
+    if (sub === 'files' && file !== undefined && parts.length === 3) {
+      if (method === 'PUT') {
+        let data: Buffer;
+        try {
+          data = await readRaw(req, MAX_THEME_FILE);
+        } catch (err) {
+          return json(res, 413, { error: (err as Error).message });
+        }
+        const files = await store.putFile(name, file, data);
+        log.info('theme image saved', { theme: name, file, bytes: data.length });
+        return json(res, 200, { files });
+      }
+      if (method === 'DELETE') {
+        const files = await store.removeFile(name, file);
+        log.info('theme image deleted', { theme: name, file });
+        return json(res, 200, { files });
+      }
+      return refuse();
+    }
+    return json(res, 404, { error: 'Not found' });
+  } catch (err) {
+    if (err instanceof ThemeError) return json(res, err.status, { error: err.message });
+    throw err;
+  }
+}
+
+/** The request's JSON body; on bad JSON, sends 400 and returns undefined. */
+async function jsonBody(req: http.IncomingMessage, res: http.ServerResponse): Promise<unknown> {
+  try {
+    return JSON.parse(await readBody(req)) as unknown;
+  } catch (err) {
+    json(res, 400, { error: (err as Error).message.startsWith('Body') ? (err as Error).message : 'Body is not valid JSON' });
+    return undefined;
   }
 }
 
@@ -208,20 +316,28 @@ function authorized(req: http.IncomingMessage, token: string): boolean {
   return given !== '' && timingSafeEqual(a, b);
 }
 
-function readBody(req: http.IncomingMessage): Promise<string> {
+async function readBody(req: http.IncomingMessage): Promise<string> {
+  return (await readRaw(req, MAX_BODY)).toString('utf8');
+}
+
+/** The request body as bytes, refused past `max` bytes. */
+function readRaw(req: http.IncomingMessage, max: number): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const chunks: Buffer[] = [];
     let size = 0;
+    let done = false;
     req.on('data', (c: Buffer) => {
+      if (done) return;
       size += c.length;
-      if (size > MAX_BODY) {
-        reject(new Error(`Body larger than ${MAX_BODY} bytes`));
-        req.destroy();
+      if (size > max) {
+        done = true;
+        reject(new Error(`Body larger than ${max} bytes`));
+        req.resume(); // drain the rest, so the answer can still be sent
       } else {
         chunks.push(c);
       }
     });
-    req.on('end', () => resolve(Buffer.concat(chunks).toString('utf8')));
+    req.on('end', () => { if (!done) resolve(Buffer.concat(chunks)); });
     req.on('error', reject);
   });
 }

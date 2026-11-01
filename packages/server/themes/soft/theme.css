@@ -1,0 +1,24 @@
+/* Soft: airy, larger type, rounded and pill-shaped. A built-in Veneer theme;
+   copy it in the designer to start your own. */
+
+:root {
+  --rh: 2.15em;
+  --shadow: 0 2px 6px rgb(16 24 40 / 5%), 0 12px 32px rgb(16 24 40 / 8%);
+}
+:root body { background: radial-gradient(circle at 20% 0%, var(--accent-soft), var(--bg) 45%); }
+:root .topbar { background: transparent; border-bottom: 0; padding: 18px 28px; }
+:root .titles h1 { font-size: 20px; }
+:root .stage { padding: 12px 20px 110px; gap: 16px; }
+:root .sheet { border: 0; border-radius: 22px; padding: 28px 34px; }
+:root .canvas { font-size: clamp(11px, calc((100vw - 120px) / (var(--cols) * 0.66)), 16px); }
+:root .field { border-radius: 10px; background: var(--bg); border-color: transparent; }
+:root .field:focus { border-color: var(--accent); }
+:root .banner { border-radius: 14px; border: 0; }
+:root .menu-key { border-radius: 999px; }
+:root .card { border-radius: 16px; }
+:root button.ghost, :root .keybar button, :root .screen-actions button { border-radius: 999px; }
+:root .keybar {
+  inset: auto 50% 16px auto; transform: translateX(50%); width: max-content; max-width: calc(100vw - 32px);
+  border: 1px solid var(--border); border-radius: 999px; box-shadow: var(--shadow); padding: 8px 10px;
+}
+:root .keybar button { border-color: transparent; }

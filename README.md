@@ -254,7 +254,8 @@ definition** goes further. Each definition is one JSON file in `screens/` (or
   `VENEER_DESIGNER=local`, browsers on the server's own machine use it without a token;
   `npm run dev` and `npm run demo` turn this on. For anyone else, set `VENEER_DESIGNER_TOKEN`,
   which the designer asks for once per tab. The two can be combined. The design panel has
-  three tabs: **Site-wide** (CSS and JavaScript for every page), **Page** (this screen's
+  four tabs: **Site-wide** (CSS and JavaScript for every page), **Themes** (the look of every
+  page: [Themes](#themes)), **Page** (this screen's
   customization: name, title, how it's recognised, buttons, CSS and JavaScript) and
   **Selected** (the item last clicked on the screen). Click any
   text, field or table to change it, and see the result immediately. New customizations
@@ -271,22 +272,108 @@ definition** goes further. Each definition is one JSON file in `screens/` (or
 - **Demo:** `npm run demo` includes a customized order-entry screen (main menu option 2),
   and serves the example components, ready to place from the designer.
 
-### Site style
+### Themes
 
-The designer's **Site-wide** tab starts with **Style**: a base look for every page, and
-options that override it. The page shows changes as they are made; **Save site** applies them
-for every user (saved as `global.style.json`, beside `global.css`).
+A theme is how every page looks, for everyone: a style sheet plus artwork (a logo and any
+other images), made in the designer by whoever customizes the screens. One theme is in use at a
+time; others stay saved, so you can prepare a new look and switch over when it's ready.
 
-| | |
-| --- | --- |
-| Look | **Default**, **Compact** (dense, for power users), **Flat** (accent-colored header, square corners, no shadows), **Green screen** (the 5250 palette, always dark), **Soft** (larger, rounded, a floating key bar) |
-| Accent | A color for buttons, links and highlights; overrides `VENEER_BRAND_ACCENT` |
-| Corners | From the look, square or round |
-| Density | From the look, compact, normal or roomy rows |
-| Font | From the look, sans-serif or monospace |
+Themes are kept in the screens folder, so they go into git and from development to production
+with the screen definitions:
 
-Only these values are accepted, so a style file cannot inject CSS. For anything else, use
-`global.css`.
+```
+screens/themes/acme/theme.css    the style sheet
+screens/themes/acme/logo.svg     images; one named logo.* replaces the header logo and tab icon
+screens/themes/active.json       {"theme": "acme"}: the theme in use
+```
+
+**Built-in themes:** **Default** (Veneer's own look, used until you pick another), **Compact**
+(dense, for power users), **Flat** (accent-colored header, square corners, no shadows),
+**Green screen** (the 5250 palette, always dark), **Soft** (larger, rounded, a floating key
+bar) and **High contrast** (black on white, or white on black in dark mode, with strong borders
+and focus rings). They come with Veneer and can't be changed, but each can be copied to start
+your own. Their style sheets are in `packages/server/themes/` and make good examples.
+
+**Make your company's theme:**
+
+1. Open the designer and its **Themes** tab. Pick a theme to see the screen in it.
+2. Under **New theme**, give your theme a name (letters, digits, `-` and `_`) and click
+   **Make a copy**. It copies the theme you picked, style sheet and images.
+3. Edit the **Style sheet**. The screen shows your changes as you type, and **Undo** and
+   **Redo** step through them. Most themes only set CSS variables: open **CSS variables** and
+   click **Insert** to add one to the `:root` rule with an example value, then change the value.
+4. Under **Artwork**, add your logo (`logo.svg` or `logo.png`) and any other images: PNG, SVG,
+   JPEG, WebP or GIF, up to 1 MB each. Use an image in the style sheet by its name, such as
+   `background: url(banner.png)`.
+5. Click **Save theme**, then **Use for everyone**. Every user's page switches to it from their
+   next screen, without reloading. Host sessions aren't affected.
+
+A short theme for a company in red:
+
+```css
+:root {
+  --brand-accent: #c8102e;
+  --header-bg: #7a0019;
+  --header-text: #ffffff;
+  --header-muted: #f3c6cd;
+  --header-border: transparent;
+  --radius: 4px;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --header-bg: #3d000c; }
+}
+```
+
+A theme's style sheet is loaded after Veneer's own styles and before `global.css` and screen
+CSS, so those can still adjust it. It can set its own dark-mode values with
+`@media (prefers-color-scheme: dark)`, or be always light or always dark (Green screen sets
+`color-scheme: dark`). Anything beyond the variables is ordinary CSS; to beat one of Veneer's
+own rules, prefix your selector with `:root`, as the built-in themes do. Scripts and components
+can read the theme in use from `<html data-theme="acme">`. Screen customizations are the same
+in every theme.
+
+**CSS variables:**
+
+| Variable | Sets | Example |
+| --- | --- | --- |
+| `--brand-accent` | Accent color: buttons, links, focus and highlights | `#c8102e` |
+| `--brand-accent-dark` | Accent color in dark mode (default: a lighter --brand-accent) | `#ff6b81` |
+| `--bg` | Page background | `#f4f5f7` |
+| `--surface` | The screen and panels | `#ffffff` |
+| `--surface-2` | Raised and hovered areas, list stripes | `#f8f9fb` |
+| `--border` | Borders and dividers | `#e2e5ea` |
+| `--text` | Text | `#1d232b` |
+| `--text-strong` | Headings and emphasis | `#0b1017` |
+| `--text-muted` | Labels and secondary text | `#5c6673` |
+| `--header-bg` | Page header background | `#0b3d91` |
+| `--header-text` | Page header text | `#ffffff` |
+| `--header-muted` | Page header secondary text | `#c9d6ee` |
+| `--header-border` | Line under the page header | `transparent` |
+| `--accent-2` | Second accent (designer highlights, accent2 role) | `#a1349b` |
+| `--danger` | Errors and the danger role | `#c62828` |
+| `--warning` | Warnings and the warning role | `#a15c00` |
+| `--radius-small` | Corners of buttons and fields | `6px` |
+| `--radius` | Corners of panels and menus | `8px` |
+| `--radius-large` | Corners of the screen | `12px` |
+| `--shadow` | Shadow under the screen and dialogs | `none` |
+| `--rh` | Height of a screen row (spacing) | `1.9em` |
+| `--cw` | Width of a screen column | `0.64em` |
+| `--font` | Text font | `"Segoe UI", system-ui, sans-serif` |
+| `--mono` | Fixed-width font (classic view, code) | `Consolas, monospace` |
+
+Rename and delete themes from the Themes tab (the theme in use can't be deleted: use another
+for everyone first). Editing themes needs the designer token, like the rest of the designer.
+
+**Upgrading:** before themes, the designer's Site-wide tab had a **Style** section, saved as
+`global.style.json`. The first time a newer Veneer starts, it turns a saved style into a theme
+named `site` (the chosen look's style sheet with the chosen accent, corners, density and font),
+and uses it for everyone, so nothing changes for users. The old file is left in place and no
+longer read; delete it when you like.
+
+**Security:** a theme's CSS is trusted like `global.css`, since designers can already write
+site-wide CSS and JavaScript. Uploaded images are checked on the server: by content, not just
+by name, up to 1 MB, with safe file names. Theme images are served so an SVG opened directly
+can't run script.
 
 ### Custom HTML, CSS and JavaScript
 
@@ -558,8 +645,9 @@ since the main buttons use it as their background. Restart the server after chan
 
 A screen definition can use its own accent, for instance a color per application area, by
 setting the same variables in its CSS: `:root { --brand-accent: #8a3ffc; }` (and
-`--brand-accent-dark` if needed). `global.css` can do the same for every page. An accent
-chosen in the designer's **Style** section overrides `VENEER_BRAND_ACCENT`.
+`--brand-accent-dark` if needed). `global.css` can do the same for every page. A
+[theme](#themes) that sets an accent or has a logo overrides `VENEER_BRAND_ACCENT` and
+`VENEER_BRAND_LOGO`; where it sets neither, these settings still apply.
 
 ## License
 

@@ -1,0 +1,29 @@
+/* Flat: corporate, with the accent color as the header, square corners and no
+   shadows. A built-in Veneer theme; copy it in the designer to start your own. */
+
+:root {
+  --shadow: none;
+  --header-bg: var(--accent);
+  --header-text: #fff;
+  --header-muted: #fff;
+  --header-border: transparent;
+}
+:root * { border-radius: 0 !important; }
+:root .topbar button.ghost { color: #fff; border-color: rgb(255 255 255 / 55%); }
+:root .topbar button.ghost:hover { background: rgb(255 255 255 / 15%); }
+:root .topbar .custom-badge { color: #fff; }
+:root .brand { background: #fff; padding: 3px; }
+:root .stage { padding: 0 0 80px; align-items: stretch; }
+:root .sheet { border-width: 0 0 1px; padding: 24px max(24px, calc(50vw - 560px)); }
+:root .banner { width: 100%; border-width: 0 0 1px; }
+:root .field { background: var(--surface); border-width: 0 0 1px; }
+:root .field:focus { box-shadow: 0 2px 0 var(--accent); }
+:root .keybar { background: var(--surface-2); backdrop-filter: none; }
+:root .keybar button { border-color: transparent; background: transparent; }
+:root .keybar button:hover:not(:disabled) { background: var(--surface); border-color: var(--border); }
+:root .keybar button.primary { background: var(--accent); }
+
+@media (prefers-color-scheme: dark) {
+  /* Dark mode's accent is light; darken it under the header's white text. */
+  :root { --header-bg: color-mix(in oklab, var(--accent) 45%, var(--surface)); }
+}

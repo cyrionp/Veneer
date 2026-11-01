@@ -1,0 +1,21 @@
+/* Default: Veneer's own look. A built-in Veneer theme, and the one used until
+   a site picks another.
+
+   A theme is a style sheet loaded after Veneer's styles, plus images in the
+   theme's folder (url(logo.svg) finds them). Most themes only set CSS
+   variables; the designer lists them all. For example:
+
+   :root {
+     --brand-accent: #c8102e;
+     --header-bg: #0b3d91;
+     --header-text: #ffffff;
+     --radius: 4px;
+   }
+
+   @media (prefers-color-scheme: dark) {
+     :root { --bg: #0d1117; }
+   }
+
+   A theme with an image named logo.svg (or .png, .jpg, .webp, .gif) shows it
+   in the header and as the tab icon. Copy this theme in the designer (Themes
+   tab) to start your own. */

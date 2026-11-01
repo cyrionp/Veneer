@@ -1,0 +1,19 @@
+/* Compact: dense, for power users. A built-in Veneer theme; copy it in the
+   designer (Themes tab) to start your own. */
+
+:root {
+  --rh: 1.55em;
+  --cw: 0.62em;
+}
+:root .topbar { padding: 6px 14px; gap: 10px; }
+:root .brand { height: 24px; min-width: 24px; border-radius: 6px; }
+:root .titles h1 { font-size: 15px; }
+:root .meta { font-size: 11.5px; margin-top: 0; }
+:root button.ghost { padding: 3px 8px; font-size: 12.5px; }
+:root .stage { padding: 10px 10px 64px; gap: 8px; }
+:root .sheet { padding: 12px 16px; border-radius: 8px; }
+:root .canvas { font-size: clamp(11px, calc((100vw - 60px) / (var(--cols) * 0.62)), 13.5px); }
+:root .field { height: calc(var(--rh) - 4px); margin-top: 2px; border-radius: 4px; }
+:root .banner { padding: 6px 12px; font-size: 13px; border-radius: 6px; }
+:root .keybar { padding: 6px 10px; gap: 6px; }
+:root .keybar button { padding: 4px 9px; font-size: 12.5px; border-radius: 6px; gap: 6px; }

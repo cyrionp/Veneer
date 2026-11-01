@@ -13,6 +13,7 @@ import { SessionManager } from './sessions.ts';
 import { serveStatic } from './static.ts';
 import { serveComponent } from './components.ts';
 import { ScreenStore } from './store.ts';
+import { ThemeStore, serveThemeFile } from './themes.ts';
 import { VERSION } from './version.ts';
 import { LOGO_PATH, serveLogo } from './brand.ts';
 
@@ -23,6 +24,7 @@ export interface VeneerServer {
   readonly http: http.Server;
   readonly sessions: SessionManager;
   readonly screens: ScreenStore;
+  readonly themes: ThemeStore;
   readonly inventory: ScreenInventory;
   /** Load screen definitions, then start listening. */
   listen(): Promise<AddressInfo>;
@@ -42,6 +44,9 @@ export function createServer(config: ServerConfig): VeneerServer {
   });
   const screens = new ScreenStore(config.screensDir);
   screens.on('changed', (version) => sessions.broadcast({ type: 'screens', version }));
+  // Pages get the theme with the definitions, so a theme change reloads them too.
+  const themes = new ThemeStore(config.screensDir, config.builtinThemesDir);
+  themes.on('changed', () => screens.touch());
 
   const info = () => ({
     version: VERSION,
@@ -63,7 +68,7 @@ export function createServer(config: ServerConfig): VeneerServer {
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify({ status: 'ok', version: VERSION, uptimeSeconds: Math.round(process.uptime()), sessions: sessions.size }));
     } else if (handleApi(req, res, pathname, {
-      store: screens, inventory, sessions, info, componentsDir: config.componentsDir,
+      store: screens, themes, inventory, sessions, info, componentsDir: config.componentsDir,
       designerToken: config.designerToken, designerLocal: config.designerLocal,
       adminToken: config.adminToken, adminLocal: config.adminLocal, brand: config.brand,
     })) {
@@ -72,6 +77,11 @@ export function createServer(config: ServerConfig): VeneerServer {
       res.writeHead(405).end();
     } else if (pathname === LOGO_PATH) {
       serveLogo(config.brand ?? {}, req, res);
+    } else if (pathname.startsWith('/themes/')) {
+      serveThemeFile(themes, req, res, pathname).catch((err: Error) => {
+        log.error('theme file error', { path: pathname, error: err.message });
+        if (!res.headersSent) res.writeHead(500).end();
+      });
     } else if (pathname.startsWith('/components/')) {
       serveComponent(config.componentsDir, req, res, pathname);
     } else if (config.staticDir) {
@@ -117,9 +127,11 @@ export function createServer(config: ServerConfig): VeneerServer {
     http: server,
     sessions,
     screens,
+    themes,
     inventory,
     listen: async () => {
       await screens.load();
+      await themes.load();
       await inventory.load();
       return listenOn();
     },

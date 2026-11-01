@@ -65,7 +65,7 @@ test('rejects bad definitions with a useful path', () => {
 });
 
 test('validates site-wide CSS and JavaScript', () => {
-  assert.deepEqual(validateSite({ css: 'body {}', scripts: { screen: 'x' } }), { css: 'body {}', scripts: { load: '', screen: 'x' }, style: { look: 'default' } });
+  assert.deepEqual(validateSite({ css: 'body {}', scripts: { screen: 'x' } }), { css: 'body {}', scripts: { load: '', screen: 'x' } });
   assert.throws(() => validateSite({ scripts: { unload: 'x' } }), /scripts\.unload/);
   assert.throws(() => validateSite({ css: 1 }), /css: must be a string/);
 });

@@ -1,0 +1,35 @@
+/* Green screen: the 5250 palette in the modern layout, always dark. A
+   built-in Veneer theme; copy it in the designer to start your own. */
+
+:root {
+  --bg: #050805;
+  --surface: #0b100c;
+  --surface-2: #101711;
+  --border: #1d3a24;
+  --text: #3ee66b;
+  --text-strong: #b8ffc9;
+  --text-muted: #2c9e4c;
+  /* The site's accent (designer or server) replaces the cyan. */
+  --accent: var(--brand-accent, #3ad6d6);
+  --accent-soft: color-mix(in srgb, var(--accent) 15%, var(--surface));
+  --accent-2: #f4e04d;
+  --accent2-soft: #2a2610;
+  --danger: #ff5555;
+  --danger-soft: #2a0f0f;
+  --warning: #f4e04d;
+  --warning-soft: #2a2610;
+  --info-soft: #0d150f;
+  --row-alt: #0d140e;
+  --row-hover: #12241a;
+  --shadow: 0 0 0 1px #1d3a24, 0 0 24px rgb(62 230 107 / 6%);
+  --font: var(--mono);
+  color-scheme: dark;
+}
+:root body { font-family: var(--mono); }
+:root .brand { filter: grayscale(1) brightness(0.9) sepia(1) hue-rotate(70deg) saturate(3); }
+:root .field {
+  background: transparent; border-width: 0 0 1px; border-color: var(--text-muted); border-radius: 0; color: var(--text-strong);
+}
+:root .field:focus { background: var(--surface-2); box-shadow: none; border-color: var(--text-strong); }
+:root .keybar button.primary, :root .dialog .primary { color: #031008; }
+:root .text.reverse { background: var(--text); color: var(--bg); }

@@ -1,6 +1,6 @@
 // Screen definitions from the server, refetched when the server reports a change.
 
-import type { ScreenDefinition, SiteCustomization } from '@veneer/screens';
+import type { ActiveTheme, ScreenDefinition, SiteCustomization } from '@veneer/screens';
 import { useCallback, useEffect, useState } from 'react';
 import { setInstalled } from '../custom/components.ts';
 
@@ -8,6 +8,8 @@ export interface ScreensApi {
   screens: ScreenDefinition[];
   /** Site-wide CSS and JavaScript (global.css, global.js); null until loaded. */
   site: SiteCustomization | null;
+  /** The theme in use for everyone; null until loaded. */
+  theme: ActiveTheme | null;
   /** Names of the custom components installed on the server. */
   components: string[];
   /** Whether the server allows saving from the designer. */
@@ -20,6 +22,7 @@ export interface ScreensApi {
 export function useScreens(version: number): ScreensApi {
   const [screens, setScreens] = useState<ScreenDefinition[]>([]);
   const [site, setSite] = useState<SiteCustomization | null>(null);
+  const [theme, setTheme] = useState<ActiveTheme | null>(null);
   const [designer, setDesigner] = useState(false);
   const [tokenRequired, setTokenRequired] = useState(true);
   const [tick, setTick] = useState(0);
@@ -31,12 +34,15 @@ export function useScreens(version: number): ScreensApi {
       .then(async ([config, list]) => {
         if (!config.ok || !list.ok) throw new Error(`HTTP ${config.status}/${list.status}`);
         const c = (await config.json()) as { designer: boolean; tokenRequired?: boolean };
-        const l = (await list.json()) as { screens: ScreenDefinition[]; site?: SiteCustomization };
+        const l = (await list.json()) as { screens: ScreenDefinition[]; site?: SiteCustomization; theme?: ActiveTheme };
         if (cancelled) return;
         setDesigner(c.designer);
         setTokenRequired(c.tokenRequired ?? true);
         setScreens(l.screens);
         setSite(l.site ?? { css: '', scripts: { load: '', screen: '' } });
+        // Kept when unchanged, so the page doesn't restyle on every reload.
+        const next = l.theme ?? null;
+        setTheme((t) => (JSON.stringify(t) === JSON.stringify(next) ? t : next));
       })
       .catch((err: Error) => console.warn('Could not load screen definitions:', err.message));
     // Fetched again with the definitions, so a reload in the designer picks up new ones.
@@ -56,5 +62,5 @@ export function useScreens(version: number): ScreensApi {
   }, [version, tick]);
 
   const reload = useCallback(() => setTick((t) => t + 1), []);
-  return { screens, site, components, designer, tokenRequired, reload };
+  return { screens, site, theme, components, designer, tokenRequired, reload };
 }

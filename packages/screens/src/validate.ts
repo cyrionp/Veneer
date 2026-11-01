@@ -271,14 +271,14 @@ export function validateSite(input: unknown): SiteCustomization {
   for (const event of Object.keys(s)) {
     if (!(SITE_EVENTS as readonly string[]).includes(event)) fail(`scripts.${event.slice(0, 20)}`, `must be one of ${SITE_EVENTS.join(', ')}`);
   }
+  // A `style` from a designer page opened before themes is ignored: themes replaced it.
   return {
     css: str(o.css ?? '', 'css', MAX_CSS),
     scripts: { load: str(s.load ?? '', 'scripts.load', MAX_SCRIPT), screen: str(s.screen ?? '', 'scripts.screen', MAX_SCRIPT) },
-    style: validateStyle(o.style ?? { look: 'default' }, 'style'),
   };
 }
 
-/** The site's style (global.style.json). Only listed values pass, so it cannot inject CSS. */
+/** An old site style (global.style.json), read when upgrading to themes. Only listed values pass. */
 export function validateStyle(input: unknown, path = 'style'): SiteStyle {
   const o = obj(input, path);
   for (const key of Object.keys(o)) {

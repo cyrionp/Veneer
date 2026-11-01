@@ -3,14 +3,14 @@
 
 import {
   DATE_FORMATS, ID_PATTERN, ROLES, fillUrl, fingerprint, matches, type ButtonAction, type DateFormat, type Role, type ScreenDefinition, type ScreenEvent,
-  type SiteCustomization, type SiteEvent,
+  type ActiveTheme, type SiteCustomization, type SiteEvent,
   type Target, type Widget,
 } from '@veneer/screens';
 import type { AidName, ScreenSnapshot } from '@veneer/tn5250';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { runScript } from '../custom/runtime.ts';
-import { applyStyle } from '../ui/looks.ts';
-import { StyleSection } from './StyleSection.tsx';
+import { ThemesTab } from './ThemesTab.tsx';
+import { themeApi } from './themes.ts';
 import { InventoryDialog } from './InventoryDialog.tsx';
 import { StyleRules } from './StyleRules.tsx';
 import { CardsAndTabs } from './CardsAndTabs.tsx';
@@ -95,11 +95,14 @@ interface Props {
   clickedAt: Target | null;
   onSaved: () => void;
   onClose: () => void;
+  /** The theme in use for everyone. */
+  theme: ActiveTheme | null;
 }
 
-type Tab = 'site' | 'page' | 'selected';
+type Tab = 'site' | 'themes' | 'page' | 'selected';
 const TABS: Array<{ id: Tab; label: string }> = [
   { id: 'site', label: 'Site-wide' },
+  { id: 'themes', label: 'Themes' },
   { id: 'page', label: 'Page' },
   { id: 'selected', label: 'Selected' },
 ];
@@ -182,11 +185,10 @@ export function DesignPanel(props: Props) {
   const [siteDraft, setSiteDraft] = useState(props.site);
   useEffect(() => { setSiteDraft(props.site); }, [props.site]);
   const siteDirty = JSON.stringify(siteDraft) !== JSON.stringify(props.site);
-  // The style shows on the page as it is edited; closing the panel puts back the saved one.
-  const savedStyle = useRef(props.site.style);
-  savedStyle.current = props.site.style;
-  useEffect(() => { applyStyle(siteDraft.style); }, [siteDraft.style]);
-  useEffect(() => () => applyStyle(savedStyle.current), []);
+
+  // Themes are saved through their own API, with the same token.
+  const themes = useMemo(() => themeApi((): Record<string, string> => (tokenRequired ? { Authorization: `Bearer ${token}` } : {})), [tokenRequired, token]);
+  const [themesDirty, setThemesDirty] = useState(false);
   const saveSite = async () => {
     if (await request('PUT', '/api/site', siteDraft)) {
       const loadChanged = siteDraft.scripts.load !== props.site.scripts.load;
@@ -221,8 +223,10 @@ export function DesignPanel(props: Props) {
 
   // Ctrl+Z and Ctrl+Shift+Z (or Ctrl+Y) undo and redo page changes. In a text
   // box they are left to the browser, which undoes the typing there.
-  const undoKeys = useRef({ onUndo: props.onUndo, onRedo: props.onRedo, site: tab === 'site' });
-  undoKeys.current = { onUndo: props.onUndo, onRedo: props.onRedo, site: tab === 'site' };
+  // The Site-wide and Themes tabs have their own undo (the code boxes', the theme's buttons).
+  const ownUndo = tab === 'site' || tab === 'themes';
+  const undoKeys = useRef({ onUndo: props.onUndo, onRedo: props.onRedo, site: ownUndo });
+  undoKeys.current = { onUndo: props.onUndo, onRedo: props.onRedo, site: ownUndo };
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (!(e.ctrlKey || e.metaKey) || e.altKey) return;
@@ -251,7 +255,7 @@ export function DesignPanel(props: Props) {
       <header className="dp-head">
         <h2>Design</h2>
         <div className="dp-head-actions">
-          {tab !== 'site' && (
+          {!ownUndo && (
             <>
               <button type="button" className="ghost dp-undo" aria-label="Undo" title="Undo (Ctrl+Z)" disabled={!props.canUndo} onClick={props.onUndo}><UndoIcon /></button>
               <button type="button" className="ghost dp-undo" aria-label="Redo" title="Redo (Ctrl+Shift+Z)" disabled={!props.canRedo} onClick={props.onRedo}><UndoIcon redo /></button>
@@ -280,15 +284,18 @@ export function DesignPanel(props: Props) {
             onClick={() => setTab(t.id)}
           >
             {t.label}
-            {(t.id === 'site' ? siteDirty : t.id === 'page' && dirty) && <span className="dp-dot" title="Unsaved changes" />}
+            {(t.id === 'site' ? siteDirty : t.id === 'themes' ? themesDirty : t.id === 'page' && dirty) && <span className="dp-dot" title="Unsaved changes" />}
           </button>
         ))}
       </div>
 
       <div className="dp-body" id="dp-tabpanel" role="tabpanel" aria-labelledby={`dp-tab-${tab}`}>
+        {tab === 'themes' && (
+          <ThemesTab api={themes} saved={props.theme} canSave={canSave} setStatus={setStatus} onSaved={props.onSaved} onDirty={setThemesDirty} />
+        )}
         {tab === 'site' && (
           <>
-          <StyleSection style={siteDraft.style ?? { look: 'default' }} onChange={(style) => setSiteDraft({ ...siteDraft, style })} />
+          <p className="dp-hint">The site's colors, logo and fonts are its theme (Themes tab).</p>
           <section>
             <h3>Site-wide CSS</h3>
             <p className="dp-hint">On every page, for every screen. Saved as global.css.</p>
@@ -520,7 +527,7 @@ export function DesignPanel(props: Props) {
           </>
         )}
         {status && <p className={status.kind === 'ok' ? 'dp-ok' : 'dp-warn'} role="status">{status.text}</p>}
-        {tab === 'site' ? (
+        {tab === 'themes' ? null : tab === 'site' ? (
           <div className="dp-actions">
             <button type="button" className="primary" disabled={busy || !siteDirty || !canSave} onClick={saveSite}>Save site</button>
             {siteDirty && <button type="button" className="ghost" disabled={busy} onClick={() => setSiteDraft(props.site)}>Revert</button>}

@@ -1,0 +1,55 @@
+/* High contrast: black on white (white on black in dark mode), strong borders
+   and a clear focus ring, for low vision and bright rooms. A built-in Veneer
+   theme; copy it in the designer to start your own. */
+
+:root {
+  --bg: #ffffff;
+  --surface: #ffffff;
+  --surface-2: #f0f0f0;
+  --border: #000000;
+  --text: #000000;
+  --text-strong: #000000;
+  --text-muted: #2b2b2b;
+  --accent: var(--brand-accent, #0040c0);
+  --accent-soft: #dce6ff;
+  --accent-2: #8a007d;
+  --accent2-soft: #f6d9f2;
+  --danger: #b00000;
+  --danger-soft: #ffe0e0;
+  --warning: #7a4100;
+  --warning-soft: #ffeccc;
+  --info-soft: #eeeeee;
+  --row-alt: #f2f2f2;
+  --row-hover: #dce6ff;
+  --focus: #000000;
+  --shadow: none;
+  --header-border: #000000;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #000000;
+    --surface: #000000;
+    --surface-2: #1a1a1a;
+    --border: #ffffff;
+    --text: #ffffff;
+    --text-strong: #ffffff;
+    --text-muted: #e0e0e0;
+    --accent: var(--brand-accent-dark, #8cb4ff);
+    --accent-soft: #10264d;
+    --accent-2: #ff8af0;
+    --accent2-soft: #3d0a37;
+    --danger: #ff6b6b;
+    --danger-soft: #3d0000;
+    --warning: #ffc266;
+    --warning-soft: #3d2600;
+    --info-soft: #1a1a1a;
+    --row-alt: #121212;
+    --row-hover: #10264d;
+    --focus: #ffffff;
+    --header-border: #ffffff;
+  }
+}
+:root :is(.field, .sheet, .banner, .table, .keybar button, button.ghost) { border-width: 2px; }
+:root :focus-visible { outline: 3px solid var(--focus) !important; outline-offset: 2px; }
+:root .field:focus { box-shadow: 0 0 0 3px var(--focus); }
+:root a { text-decoration: underline; }
