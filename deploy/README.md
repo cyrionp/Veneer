@@ -8,7 +8,7 @@ no `npm install`, and no internet access. Build it on a development machine:
 
 ```sh
 npm ci
-npm run package        # release/veneer-<version>.tar.gz and .sha256
+npm run package        # release/veneer-<version>.tar.gz, the source as veneer-<version>-src.tar.gz, and a .sha256 for each
 ```
 
 Installs are laid out so that upgrades never touch configuration or customizations:

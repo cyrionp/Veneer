@@ -39,7 +39,7 @@ npm run demo          # fake IBM i + server + client on http://127.0.0.1:8080 (a
                       # VENEER_DEMO_DELAY_MS=700 npm run demo simulates a slow host
 npm run dev           # session server against your IBM i, restarts on change
 npm run dev:client    # Vite dev server on :5173 with hot reload; proxies /ws to :8080
-npm run package       # release/veneer-<version>.tar.gz for deployment
+npm run package       # release/veneer-<version>.tar.gz for deployment, plus -src.tar.gz (the source)
 ```
 
 **HTTPS and TLS:** with the defaults, Veneer talks to the IBM i over TLS on port 992 and

@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 // Builds a self-contained release: release/veneer-<version>.tar.gz
+// and the source code at the current commit: release/veneer-<version>-src.tar.gz
 //
 // The archive holds the compiled server, the built browser client and the
 // production dependencies (pure JavaScript), so the target needs only Node.js:
@@ -58,10 +59,21 @@ if (process.argv.includes('--no-archive')) {
   process.exit(0);
 }
 
+// Writes <archive>.sha256 and reports the archive's size and checksum.
+function checksum(archive) {
+  const sha256 = createHash('sha256').update(fs.readFileSync(archive)).digest('hex');
+  fs.writeFileSync(`${archive}.sha256`, `${sha256}  ${path.basename(archive)}\n`);
+  const mb = (fs.statSync(archive).size / 1024 / 1024).toFixed(1);
+  console.log(`\n${path.relative(root, archive)} (${mb} MB)\nsha256 ${sha256}`);
+}
+
 const archive = path.join(releaseDir, `${name}.tar.gz`);
 run('tar', ['-czf', archive, '-C', releaseDir, name]);
-const sha256 = createHash('sha256').update(fs.readFileSync(archive)).digest('hex');
-fs.writeFileSync(`${archive}.sha256`, `${sha256}  ${name}.tar.gz\n`);
 
-const mb = (fs.statSync(archive).size / 1024 / 1024).toFixed(1);
-console.log(`\n${path.relative(root, archive)} (${mb} MB)\nsha256 ${sha256}`);
+// The source as committed (uncommitted changes are not included), for people
+// who build Veneer themselves or need the source alongside the release.
+const source = path.join(releaseDir, `${name}-src.tar.gz`);
+run('git', ['archive', '--format=tar.gz', `--prefix=${name}-src/`, '-o', source, 'HEAD']);
+
+checksum(archive);
+checksum(source);
