@@ -39,6 +39,7 @@ cp .env.example .env  # then set VENEER_HOST etc.
 npm run cli           # interactive session against your IBM i
 npm run demo          # fake IBM i + server + client on http://127.0.0.1:8080 (after npm run build)
                       # VENEER_DEMO_DELAY_MS=700 npm run demo simulates a slow host
+npm run demo -- --3270  # the same with a fake mainframe (3270); see "Mainframe (3270) hosts"
 npm run dev           # session server against your IBM i, restarts on change
 npm run dev:client    # Vite dev server on :5173 with hot reload; proxies /ws to :8080
 npm run package       # release/veneer-<version>.tar.gz for deployment, plus -src.tar.gz (the source)
@@ -99,6 +100,16 @@ Each server talks to one kind of host. For a mainframe, set `VENEER_HOST_TYPE=32
 | `VENEER_DEVNAME_PREFIX` | LU names `PREFIX01`, `PREFIX02`, … (prefix 1-6 characters). The host's TN3270 server must define them. Blank lets the host pick an LU. |
 | `VENEER_TN3270E` | `false` uses plain TN3270 even if the host offers TN3270E (default: TN3270E when offered). |
 | `VENEER_CCSID` | The host code page: `37` (default) or `1047`. Also works for 5250. |
+
+To try it without a mainframe, run `npm run demo -- --3270` (or set
+`VENEER_HOST_TYPE=3270` for `npm run demo`). The demo mainframe has a logon screen
+(press Enter), a sign-on (any user ID), and a menu with a customer inquiry, an update
+form and an order list. Its update form and order list come with screen definitions
+(radio buttons, a spinner, and buttons for PA2 and PF7/PF8). With
+`VENEER_TERMINAL_TYPE=IBM-3278-5-E` the order list uses the 27x132 screen, and with
+`VENEER_TN3270E=false` the logon is a plain 3270 screen instead of TN3270E's SSCP-LU
+text. Until the browser gets 3270 keys and typing on screens without fields (#30), the
+logon and the blank screen after Clear take Enter only.
 
 A 3270 screen never gets the same screen id as a 5250 screen, so definitions made for
 one host type never match the other. The designer records the host type in new
@@ -302,7 +313,8 @@ definition** goes further. Each definition is one JSON file in `screens/` (or
   it. It is kept in `inventory.json` in `VENEER_DATA_DIR` (default `data/`, not in git).
 - **Demo:** `npm run demo` includes a customized order-entry screen (main menu option 2),
   a shipping notes screen with radio buttons, spinners and a text area (option 7), and
-  serves the example components, ready to place from the designer.
+  serves the example components, ready to place from the designer. `npm run demo -- --3270`
+  runs a demo mainframe instead ([Mainframe (3270) hosts](#mainframe-3270-hosts)).
 
 ### Field widgets
 

@@ -17,7 +17,7 @@
     "dev": "npm run dev -w @veneer/server",
     "start": "npm start -w @veneer/server",
     "cli": "npm run cli -w @veneer/tn5250 --",
-    "demo": "npm run demo -w @veneer/server",
+    "demo": "npm run demo -w @veneer/server --",
     "dev:client": "npm run dev -w @veneer/client",
     "package": "node scripts/package.mjs"
   },

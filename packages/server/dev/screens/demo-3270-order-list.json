@@ -1,0 +1,15 @@
+{
+  "id": "demo-3270-order-list",
+  "name": "Demo mainframe: order list",
+  "host": "3270",
+  "match": {
+    "screenIds": ["052f7ea72752ee", "01dbf3602001c7", "15c4b7103df797", "0d2807590e76c9"],
+    "text": []
+  },
+  "title": "Orders",
+  "changes": [
+    { "op": "button", "label": "Previous page", "action": { "aid": "F7" } },
+    { "op": "button", "label": "Next page", "action": { "aid": "F8" } },
+    { "op": "button", "label": "Back to menu", "action": { "aid": "F3" } }
+  ]
+}

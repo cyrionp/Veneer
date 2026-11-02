@@ -1,0 +1,23 @@
+{
+  "id": "demo-3270-update-customer",
+  "name": "Demo mainframe: update customer",
+  "host": "3270",
+  "match": {
+    "screenIds": ["091b5d97bb82b6"],
+    "text": []
+  },
+  "title": "Update Customer",
+  "changes": [
+    { "op": "widget", "field": "9:24", "widget": { "type": "radio", "options": [
+      { "value": "A", "label": "Active" },
+      { "value": "H", "label": "On hold" },
+      { "value": "I", "label": "Inactive" }
+    ], "layout": "row" } },
+    { "op": "hide", "at": { "row": 9, "col": 27 } },
+    { "op": "hide", "at": { "row": 9, "col": 37 } },
+    { "op": "hide", "at": { "row": 9, "col": 48 } },
+    { "op": "widget", "field": "8:24", "widget": { "type": "spinner", "min": 0, "max": 9999999, "step": 500 } },
+    { "op": "button", "label": "Undo changes", "action": { "aid": "PA2" } },
+    { "op": "button", "label": "Back to menu", "action": { "aid": "F3" } }
+  ]
+}

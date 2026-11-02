@@ -1,26 +1,22 @@
-// npm run demo: the demo IBM i plus the Veneer server, on http://127.0.0.1:8080.
+// npm run demo: a demo host plus the Veneer server, on http://127.0.0.1:8080.
+// The demo IBM i (5250) by default; npm run demo -- --3270 (or
+// VENEER_HOST_TYPE=3270) for the demo mainframe.
 
-import { fileURLToPath } from 'node:url';
 import { loadConfig } from '../src/config.ts';
 import { log } from '../src/log.ts';
 import { createServer } from '../src/server.ts';
 import { DemoHost } from './demoHost.ts';
+import { DemoHost3270 } from './demoHost3270.ts';
+import { demoEnv, demoHostType } from './demoEnv.ts';
 
-const hostPort = await new DemoHost().listen();
-const config = loadConfig({
-  VENEER_SCREENS_DIR: fileURLToPath(new URL('./screens', import.meta.url)),
-  VENEER_COMPONENTS_DIR: fileURLToPath(new URL('./components', import.meta.url)),
-  VENEER_DESIGNER: 'local',
-  VENEER_ADMIN: 'local',
-  ...process.env,
-  // The demo host is an IBM i (5250), whatever .env says.
-  VENEER_HOST_TYPE: '5250', VENEER_TN3270E: '',
-  VENEER_HOST: '127.0.0.1', VENEER_PORT: String(hostPort), VENEER_TLS: 'false',
-});
+const type = demoHostType(process.argv.slice(2), process.env);
+const hostPort = await (type === '3270' ? new DemoHost3270() : new DemoHost()).listen();
+const config = loadConfig(demoEnv(type, hostPort, process.env));
 const server = createServer(config);
 const addr = await server.listen();
 log.info('demo ready', {
   url: `http://${addr.address}:${addr.port}`,
+  host: type === '3270' ? 'demo mainframe (3270)' : 'demo IBM i (5250)',
   client: config.staticDir ?? 'not built (npm run build)',
   screens: config.screensDir,
   designer: config.designerLocal ? 'no token needed from this machine' : 'off',
