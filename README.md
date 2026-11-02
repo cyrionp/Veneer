@@ -215,8 +215,9 @@ definition** goes further. Each definition is one JSON file in `screens/` (or
   - `hide` hides the item at a position.
   - `text` replaces an item's text.
   - `role` restyles text (`emphasis`, `muted`, `danger`, …).
-  - `widget` turns a field into a dropdown, checkbox or date picker. Values are
-    converted to and from the host's format.
+  - `widget` shows a field as a dropdown, checkbox, date picker, radio buttons, spinner
+    or text area. Values are converted to and from the host's format, so the host sees the
+    same fields and values as on a terminal. See [Field widgets](#field-widgets).
   - `button` adds an action button that presses a key, optionally filling fields first,
     or opens a web page in a new tab. In a `url`, `{6:22}` is replaced by the field starting
     at row 6, column 22 (including what the user has typed), or else the screen text there
@@ -270,7 +271,47 @@ definition** goes further. Each definition is one JSON file in `screens/` (or
   which screens to customize next. Only the screen's shape is recorded, never what was on
   it. It is kept in `inventory.json` in `VENEER_DATA_DIR` (default `data/`, not in git).
 - **Demo:** `npm run demo` includes a customized order-entry screen (main menu option 2),
-  and serves the example components, ready to place from the designer.
+  a shipping notes screen with radio buttons, spinners and a text area (option 7), and
+  serves the example components, ready to place from the designer.
+
+### Field widgets
+
+In the designer, select an input field and pick **Show as**. In a definition, a `widget`
+change names the field by its id (`"row:col"`):
+
+| Show as | `widget` | Settings |
+| --- | --- | --- |
+| Dropdown | `{ "type": "select", "options": [{ "value": "TX", "label": "Texas" }] }` | `value` is sent to the host, `label` is shown |
+| Checkbox | `{ "type": "checkbox", "on": "Y", "off": "N" }` | The values for checked and unchecked |
+| Date picker | `{ "type": "date", "format": "YYYYMMDD" }` | The host's date format |
+| Radio buttons | `{ "type": "radio", "options": [{ "value": "A", "label": "Air" }], "layout": "row" }` | As a dropdown; `layout` `row` (side by side, the default) or `column`; `allowClear` |
+| Spinner | `{ "type": "spinner", "min": 0, "max": 999, "step": 1 }` | All optional; `step` defaults to 1 |
+| Text area | `{ "type": "textarea", "fields": ["14:10", "15:10", "16:10", "17:10"] }` | The fields, one per line, starting with the widget's own |
+
+- **Dropdowns and radio buttons:** a value that matches no choice shows nothing chosen and
+  is kept as it is until the user picks one. In the designer, type the choices one per
+  line as `value=Label`. For radio buttons, `"allowClear": true` adds a **None** choice
+  that clears the field (it is sent as blanks). Arrow keys move between the choices and
+  Tab goes on to the next field. In a `column` layout each choice takes a row, so leave
+  room below the field or move what is there.
+- **Spinner:** a number with up and down buttons; the Up and Down arrow keys step it too.
+  It stays between `min` and `max` and follows the field's rules, so what it sends is what
+  typing the number would send. Signed numeric fields have their decimals implied, so
+  count in the units typed: on a field holding 12.50 as `1250`, a `step` of 100 is one
+  whole. Numeric-only fields keep the decimals typed (`12.50` steps to `13.50`). The
+  designer offers it for numeric fields only.
+- **Text area:** several input fields, such as comment lines 1 to 4, edited as one box
+  drawn over their rows. Each field is a line. Text that runs past a field's length wraps
+  to the next line at a space, pushing that line along; Enter starts a new line. Typing
+  stops when there is no room left, and a count beside the box shows how much is left.
+  Each field still gets its own part, with its own rules (an upper-case field converts as
+  you type), and only the lines that changed are sent. When the host puts the cursor or an
+  error on one of the fields, the box takes focus with the caret on that line. Enter in
+  the box starts a line rather than pressing Enter; use the **Enter** button or another
+  key to send the screen. In the designer, select the first field, choose **Show as: Text
+  area**, then click **Add the fields below** (the input fields in the same column and of
+  the same length on the following rows), or **Pick fields on the screen** and click the
+  fields to add or take out. Fields in a list (a subfile) can't be joined into a text area.
 
 ### Themes
 

@@ -48,8 +48,15 @@ export interface FieldItem extends Placed {
   /** Command line (follows "===>"). */
   command?: boolean;
   options?: Option[];
-  /** Set by a customization: dropdown, checkbox or date picker. */
+  /** Set by a customization: dropdown, checkbox, date picker, radio buttons, spinner or text area. */
   widget?: Widget;
+  /**
+   * A text area's fields, this one first. The others are hidden: the box is
+   * drawn here, covering the rows down to the last of them.
+   */
+  parts?: FieldSnapshot[];
+  /** Part of the text area that starts at this field (by id). */
+  partOf?: string;
   /** Set by a style rule. */
   role?: Role;
   /** A custom component draws this field instead, when it is working (see ComponentItem). */

@@ -56,6 +56,7 @@ type State =
   | { screen: 'customer'; user: string; index: number; plain: boolean }
   | { screen: 'jobs'; user: string; page: number }
   | { screen: 'contacts'; user: string; page: number; plain: boolean }
+  | { screen: 'shipping'; user: string }
   /** Help, shown from `back` (the screen Help was pressed on) about `topic`. */
   | { screen: 'help'; user: string; back: 'order' | 'menu'; topic: string; page: number };
 
@@ -140,6 +141,10 @@ export class DemoHost {
           state = { screen: 'contacts', user: s.user, page: 0, plain };
           return show(contacts(0, undefined, plain));
         }
+        if (cmd === '7') {
+          state = { screen: 'shipping', user: s.user };
+          return show(shippingNotes());
+        }
         if (aid === 0x34 || cmd === '9') { // F4 or "Display a menu"
           state = { screen: 'menuWindow', user: s.user };
           return show(menuWindow());
@@ -159,6 +164,16 @@ export class DemoHost {
         const summary = `Accepted: ${value('6:22')} ${value('7:22')} qty ${qty} item ${value('9:22')} ` +
           `ship ${value('10:22') || '-'} rush ${value('11:22') || 'N'}`.slice(0, 78);
         return show(orderEntry(summary));
+      }
+      if (s.screen === 'shipping') {
+        if (aid === 0x3c || aid === 0x33) { state = { screen: 'menu', user: s.user }; return show(mainMenu(s.user)); }
+        // Like a real program, it checks the comments and puts the cursor on a bad one.
+        const bad = NOTE_ROWS.find((row) => /[<>]/.test(fields.get(`${row}:22`) ?? ''));
+        if (bad) {
+          const col = 22 + (fields.get(`${bad}:22`) ?? '').search(/[<>]/);
+          return show(shippingNotes(`Comments cannot contain < or > (line ${NOTE_ROWS.indexOf(bad) + 1}).`, fields, { row: bad, col }));
+        }
+        return show(shippingNotes(shippingSummary(fields)));
       }
       if (s.screen === 'customer') {
         if (aid === 0x3c || aid === 0x33) { state = { screen: 'menu', user: s.user }; return show(mainMenu(s.user)); }
@@ -390,6 +405,45 @@ function menuWindow(): number[] {
     .cursor(11, 38).readMdt().build();
 }
 
+/** The ways an order can ship, by the code the host keeps. */
+export const SHIP_VIA: Record<string, string> = { A: 'Air', O: 'Ocean', T: 'Truck', P: 'Pickup' };
+/** Comment lines 1-4: row 11 on, column 22, 40 long. */
+export const NOTE_ROWS = [11, 12, 13, 14];
+
+/**
+ * Shipping Notes (SHP100): a ship-via code, carton count, weight and four
+ * comment lines, which the demo definition shows as radio buttons, spinners
+ * and a text area. Enter shows what the host received.
+ */
+export function shippingNotes(message?: string, typed?: Map<string, string>, cursor = { row: 6, col: 22 }): number[] {
+  // Shown again after an error, with what the user typed.
+  const value = (id: string, host: string) => typed?.get(id) ?? host;
+  const s = new HostStream().clear().write()
+    .text(1, 2, 'SHP100')
+    .text(1, centered('Shipping Notes'), 'Shipping Notes', WHITE)
+    .text(3, 2, 'Type choices, press Enter.', BLUE)
+    .text(5, 4, 'Order  . . . . . :').text(5, 23, '104577')
+    .text(6, 4, 'Ship via . . . . ').field(6, 22, 1, { ffw: 0x4020, value: value('6:22', 'T') }).text(6, 30, 'A=Air, O=Ocean, T=Truck, P=Pickup', BLUE)
+    .text(7, 4, 'Cartons  . . . . ').field(7, 22, 4, { ffw: 0x4700, value: typed?.has('7:22') ? decodeSigned(typed.get('7:22')) : '3' }).text(7, 30, '1-999', BLUE)
+    .text(8, 4, 'Weight (kg)  . . ').field(8, 22, 7, { ffw: 0x4300, value: value('8:22', '12.5') }).text(8, 30, 'Steps of 0.5', BLUE)
+    .text(10, 4, 'Comments . . . . ');
+  const notes = ['Leave at the loading dock if nobody is', 'there. Call ahead on weekends.', '', ''];
+  NOTE_ROWS.forEach((row, i) => s.field(row, 22, 40, { value: value(`${row}:22`, notes[i]!) }));
+  s.text(22, 2, 'F3=Exit   F12=Cancel', BLUE);
+  if (message) s.text(24, 2, message.slice(0, 78));
+  return s.cursor(cursor.row, cursor.col).readMdt().build();
+}
+
+/** What the host received from Shipping Notes, on one line. */
+export function shippingSummary(fields: Map<string, string>): string {
+  const value = (id: string) => (fields.get(id) ?? '').trim();
+  const via = value('6:22');
+  const cartons = fields.has('7:22') ? decodeSigned(fields.get('7:22')) : '';
+  const changed = NOTE_ROWS.filter((row) => fields.has(`${row}:22`)).length;
+  return `Received: ship ${via ? `${via} (${SHIP_VIA[via] ?? 'unknown'})` : 'unchanged'}, cartons ${cartons || 'unchanged'}, ` +
+    `weight ${value('8:22') || 'unchanged'}, ${changed} comment line${changed === 1 ? '' : 's'} changed`;
+}
+
 function mainMenu(user: string, message?: string): number[] {
   return new HostStream().clear().write()
     .text(1, 2, 'MAIN')
@@ -402,6 +456,7 @@ function mainMenu(user: string, message?: string): number[] {
     .text(8, 6, '4. Customer contacts (cards demo)')
     .text(9, 6, '5. Customer addresses without the maps')
     .text(10, 6, '6. Customer contacts without the cards')
+    .text(11, 6, '7. Shipping notes (widgets demo)')
     .text(12, 6, '8. Problem handling')
     .text(13, 6, '9. Display a menu')
     .text(14, 5, '10. Information Assistant options')

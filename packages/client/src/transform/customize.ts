@@ -2,7 +2,7 @@
 // found by their screen position, so changes survive data changing on screen.
 
 import { conditionTester, type Change, type ScreenDefinition, type Target } from '@veneer/screens';
-import type { ComponentItem, HtmlItem, Item, ScreenView, TableItem } from './types.ts';
+import type { ComponentItem, FieldItem, HtmlItem, Item, ScreenView, TableItem } from './types.ts';
 
 export interface CustomizeOptions {
   /** Designer mode: keep hidden items (marked hidden) so they can be selected. */
@@ -65,6 +65,10 @@ export function customize(view: ScreenView, def: ScreenDefinition | undefined, o
         break;
       }
       case 'widget':
+        if (change.widget.type === 'textarea') {
+          joinFields(all(), change.field, change.widget.fields);
+          break;
+        }
         for (const item of all()) {
           if (item.kind === 'field' && item.field.id === change.field) item.widget = change.widget;
           if (item.kind === 'table') {
@@ -145,6 +149,25 @@ export function customize(view: ScreenView, def: ScreenDefinition | undefined, o
     if (out.window) out.window.items = out.window.items.filter((i) => !i.hidden);
   }
   return out;
+}
+
+/**
+ * A text area: the first field draws the box, the others are hidden under it.
+ * Only fields drawn on their own count (not a list's cells), and the first must
+ * be one, or nothing changes.
+ */
+function joinFields(items: Item[], first: string, ids: readonly string[]): void {
+  const fields = new Map<string, FieldItem>();
+  for (const i of items) if (i.kind === 'field') fields.set(i.field.id, i);
+  const head = fields.get(first);
+  if (!head) return;
+  const parts = ids.map((id) => fields.get(id)).filter((i): i is FieldItem => i !== undefined);
+  head.widget = { type: 'textarea', fields: parts.map((p) => p.field.id) };
+  head.parts = parts.map((p) => p.field);
+  for (const p of parts.slice(1)) {
+    p.hidden = true;
+    p.partOf = first;
+  }
 }
 
 /**

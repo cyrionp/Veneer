@@ -126,3 +126,17 @@ export const orderEntry = () => render((s) => s
 export const sysreqPrompt = () => render((s) => s
   .text(1, 33, 'IBM i Main Menu', WHITE)
   .field(24, 2, 78));
+
+/** An order with a ship-via code, a quantity and four comment lines (the second one filled in). */
+export const orderNotes = () => render((s) => s
+  .text(1, 33, 'Order Notes', WHITE)
+  .text(4, 3, 'Ship via').field(4, 20, 1, { ffw: 0x4020 })        // monocase
+  .text(5, 3, 'Quantity').field(5, 20, 5, { ffw: 0x4700 })        // signed numeric
+  .text(6, 3, 'Boxes').field(6, 20, 3, { ffw: 0x4300 })           // numeric only
+  .text(8, 3, 'Comments')
+  .field(8, 20, 20)
+  .field(9, 20, 20, { value: 'FRAGILE' })
+  .field(10, 20, 20)
+  .field(11, 20, 20)
+  .field(12, 40, 20)                                             // another column: not a line
+  .text(24, 2, 'F3=Exit   F12=Cancel', BLUE));

@@ -5,6 +5,7 @@ import type { FieldSnapshot } from '@veneer/tn5250';
 import type { CSSProperties } from 'react';
 import type { Option } from '../transform/types.ts';
 import { filterValue, isNumeric, withSign } from './fieldRules.ts';
+import { RadioField, SpinnerField, TextAreaField } from './widgets.tsx';
 
 export interface FieldBinding {
   value: (f: FieldSnapshot) => string;
@@ -25,6 +26,8 @@ export function FieldInput(props: {
   options?: Option[] | undefined;
   /** A widget set by a screen customization. */
   widget?: Widget | undefined;
+  /** A text area's fields, this one first (see FieldItem.parts). */
+  parts?: FieldSnapshot[] | undefined;
   /** Designer mode: not editable. (The designer canvas also swallows clicks.) */
   readOnly?: boolean | undefined;
   /** Position tag the designer uses to identify the item ("row:col"). */
@@ -38,13 +41,18 @@ export function FieldInput(props: {
     .filter(Boolean).join(' ');
   const value = binding.value(field);
 
+  const common = { field, binding, style, className, label, readOnly, dataAt: props.dataAt };
+  if (widget?.type === 'radio') return <RadioField {...common} widget={widget} />;
+  if (widget?.type === 'spinner') return <SpinnerField {...common} widget={widget} />;
+  if (widget?.type === 'textarea' && props.parts && props.parts.length > 0) return <TextAreaField {...common} parts={props.parts} />;
+
   if (widget?.type === 'checkbox') {
     return (
       <span className="checkbox-field" style={style}>
         <input
           type="checkbox"
           data-field={field.id}
-          data-at={props.dataAt}
+        data-at={props.dataAt}
           aria-label={label}
           checked={value.trim() === widget.on}
           onChange={(e) => binding.onChange(field, e.target.checked ? widget.on : widget.off)}
@@ -60,7 +68,7 @@ export function FieldInput(props: {
         style={style}
         type="date"
         data-field={field.id}
-          data-at={props.dataAt}
+        data-at={props.dataAt}
         readOnly={readOnly}
         aria-label={label}
         value={hostToIso(value, widget.format)}
@@ -76,7 +84,7 @@ export function FieldInput(props: {
         className={`${className}${compact ? ' option-select' : ' widget-select'}`}
         style={style}
         data-field={field.id}
-          data-at={props.dataAt}
+        data-at={props.dataAt}
         aria-label={label ?? 'Option'}
         value={current}
         onChange={(e) => binding.onChange(field, e.target.value)}
@@ -97,7 +105,7 @@ export function FieldInput(props: {
       className={className}
       style={style}
       data-field={field.id}
-          data-at={props.dataAt}
+      data-at={props.dataAt}
       aria-label={label}
       type={field.attr.nonDisplay ? 'password' : 'text'}
       inputMode={NUMERIC_KEYBOARD.has(field.shift) ? 'decimal' : undefined}
@@ -127,7 +135,8 @@ export function FieldInput(props: {
   );
 }
 
-function focusNext(el: HTMLElement): void {
+/** Move to the next field, as a full 5250 field does (a radio group: its chosen button). */
+export function focusNext(el: HTMLElement): void {
   const all = [...document.querySelectorAll<HTMLElement>('[data-field]')];
   all[all.indexOf(el) + 1]?.focus();
 }

@@ -2,7 +2,7 @@
 
 import { isWebTemplate, placeholders } from './links.ts';
 import { STYLE_TESTS } from './styles.ts';
-import { CORNERS, DATE_FORMATS, DENSITIES, FONTS, LOOKS, ROLES, SCREEN_EVENTS, SITE_EVENTS, STYLE_TARGETS, type Change, type ComponentOptions, type StyleCondition, type KeyAction, type ScreenEvent, type SiteCustomization, type SiteStyle, type ScreenDefinition, type TabBand, type Target, type TextMatch, type Widget } from './types.ts';
+import { CORNERS, DATE_FORMATS, MAX_TEXTAREA_FIELDS, RADIO_LAYOUTS, DENSITIES, FONTS, LOOKS, ROLES, SCREEN_EVENTS, SITE_EVENTS, STYLE_TARGETS, type Change, type ComponentOptions, type StyleCondition, type KeyAction, type ScreenEvent, type SiteCustomization, type SiteStyle, type ScreenDefinition, type TabBand, type Target, type TextMatch, type Widget } from './types.ts';
 
 export const ID_PATTERN = /^[a-z0-9][a-z0-9-]{0,63}$/;
 const AID = /^(Enter|Help|PageUp|PageDown|Print|Clear|RecordBackspace|F([1-9]|1\d|2[0-4]))$/;
@@ -93,23 +93,60 @@ function textMatch(v: unknown, path: string): TextMatch {
   return { ...target(o, path), text };
 }
 
-function widget(v: unknown, path: string): Widget {
+function options(v: unknown, path: string): Array<{ value: string; label: string }> {
+  return arr(v, path, 200).map((x, i) => {
+    const opt = obj(x, `${path}[${i}]`);
+    return { value: str(opt.value, `${path}[${i}].value`, 132), label: str(opt.label, `${path}[${i}].label`) };
+  });
+}
+
+function num(v: unknown, path: string): number {
+  if (typeof v !== 'number' || !Number.isFinite(v) || Math.abs(v) > 1e15) fail(path, 'must be a number');
+  return v;
+}
+
+function widget(v: unknown, path: string, field: string): Widget {
   const o = obj(v, path);
   switch (o.type) {
     case 'select':
-      return {
-        type: 'select',
-        options: arr(o.options, `${path}.options`, 200).map((x, i) => {
-          const opt = obj(x, `${path}.options[${i}]`);
-          return { value: str(opt.value, `${path}.options[${i}].value`, 132), label: str(opt.label, `${path}.options[${i}].label`) };
-        }),
-      };
+      return { type: 'select', options: options(o.options, `${path}.options`) };
     case 'checkbox':
       return { type: 'checkbox', on: str(o.on, `${path}.on`, 132), off: str(o.off, `${path}.off`, 132) };
     case 'date':
       return { type: 'date', format: oneOf(o.format, DATE_FORMATS, `${path}.format`) };
+    case 'radio': {
+      const out: Widget = { type: 'radio', options: options(o.options, `${path}.options`) };
+      if (o.layout !== undefined) out.layout = oneOf(o.layout, RADIO_LAYOUTS, `${path}.layout`);
+      if (o.allowClear !== undefined) {
+        if (typeof o.allowClear !== 'boolean') fail(`${path}.allowClear`, 'must be true or false');
+        if (o.allowClear) out.allowClear = true;
+      }
+      return out;
+    }
+    case 'spinner': {
+      const out: Widget = { type: 'spinner' };
+      if (o.min !== undefined) out.min = num(o.min, `${path}.min`);
+      if (o.max !== undefined) out.max = num(o.max, `${path}.max`);
+      if (o.step !== undefined) {
+        out.step = num(o.step, `${path}.step`);
+        if (out.step <= 0) fail(`${path}.step`, 'must be more than 0');
+      }
+      if (out.min !== undefined && out.max !== undefined && out.min > out.max) fail(`${path}.max`, 'must not be less than min');
+      return out;
+    }
+    case 'textarea': {
+      const fields = arr(o.fields, `${path}.fields`, MAX_TEXTAREA_FIELDS).map((x, i) => {
+        const id = str(x, `${path}.fields[${i}]`, 7);
+        if (!FIELD_ID.test(id)) fail(`${path}.fields[${i}]`, 'must be a field id like "6:53"');
+        return id;
+      });
+      if (fields[0] !== field) fail(`${path}.fields`, `must start with the widget's own field, "${field}"`);
+      const dup = fields.find((id, i) => fields.indexOf(id) !== i);
+      if (dup) fail(`${path}.fields`, `lists "${dup}" twice`);
+      return { type: 'textarea', fields };
+    }
     default:
-      fail(`${path}.type`, 'must be select, checkbox or date');
+      fail(`${path}.type`, 'must be select, checkbox, date, radio, spinner or textarea');
   }
 }
 
@@ -122,7 +159,7 @@ function change(v: unknown, path: string): Change {
     case 'widget': {
       const field = str(o.field, `${path}.field`, 7);
       if (!FIELD_ID.test(field)) fail(`${path}.field`, 'must be a field id like "6:53"');
-      return { op: 'widget', field, widget: widget(o.widget, `${path}.widget`) };
+      return { op: 'widget', field, widget: widget(o.widget, `${path}.widget`, field) };
     }
     case 'button': {
       const a = obj(o.action, `${path}.action`);
@@ -210,8 +247,24 @@ function change(v: unknown, path: string): Change {
   }
 }
 
-/** At most one set of tabs, and no card split between two tabs (or half outside them). */
+/**
+ * At most one set of tabs, no card split between two tabs (or half outside
+ * them), and each field in at most one text area.
+ */
 function checkLayout(changes: Change[]): void {
+  const joined = new Map<string, number>();
+  changes.forEach((c, i) => {
+    if (c.op !== 'widget' || c.widget.type !== 'textarea') return;
+    for (const id of c.widget.fields) {
+      if (joined.has(id)) fail(`changes[${i}].widget.fields`, `"${id}" is already in the text area of changes[${joined.get(id)}]`);
+      joined.set(id, i);
+    }
+  });
+  changes.forEach((c, i) => {
+    if (c.op === 'widget' && c.widget.type !== 'textarea' && joined.has(c.field)) {
+      fail(`changes[${i}].field`, `"${c.field}" is part of the text area of changes[${joined.get(c.field)}]`);
+    }
+  });
   const tabs = changes.filter((c) => c.op === 'tabs');
   if (tabs.length > 1) fail('changes', 'may have only one tabs change');
   const bands = tabs[0]?.tabs;

@@ -40,10 +40,24 @@ export interface SelectOption {
   label: string;
 }
 
+export const RADIO_LAYOUTS = ['row', 'column'] as const;
+export type RadioLayout = (typeof RADIO_LAYOUTS)[number];
+
+/** The most input fields one text area can join. */
+export const MAX_TEXTAREA_FIELDS = 27;
+
 export type Widget =
   | { type: 'select'; options: SelectOption[] }
   | { type: 'checkbox'; on: string; off: string }
-  | { type: 'date'; format: DateFormat };
+  | { type: 'date'; format: DateFormat }
+  /** One choice of several; `allowClear` adds a "None" choice that sends blanks. */
+  | { type: 'radio'; options: SelectOption[]; layout?: RadioLayout; allowClear?: boolean }
+  /** A number with up/down buttons, in the units typed into the field (1250 for 12.50 in a signed field). */
+  | { type: 'spinner'; min?: number; max?: number; step?: number }
+  /** Several input fields edited as one multi-line box; `fields` starts with the widget's own field. */
+  | { type: 'textarea'; fields: string[] };
+
+export type WidgetType = Widget['type'];
 
 /** Press a key, optionally typing into fields first. */
 export interface KeyAction {

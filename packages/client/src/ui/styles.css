@@ -177,6 +177,43 @@ button.ghost:hover { background: var(--surface-2); }
 .checkbox-field { height: var(--rh); display: inline-flex; align-items: center; }
 .checkbox-field input { width: 1.1em; height: 1.1em; accent-color: var(--accent); margin: 0; }
 
+/* Radio buttons: side by side on the field's row, or one under another a row each. */
+.radio-field { display: flex; align-items: center; gap: 0 1.2em; min-height: var(--rh); width: auto !important; white-space: nowrap; }
+.radio-field.column { flex-direction: column; align-items: flex-start; }
+.radio-choice { display: inline-flex; align-items: center; gap: 0.4em; height: var(--rh); cursor: pointer; }
+.radio-choice input { width: 1em; height: 1em; margin: 0; accent-color: var(--accent); cursor: pointer; }
+.radio-choice input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Spinner: the field, with up/down buttons inside its right edge. */
+.spinner-field { display: inline-flex; height: var(--rh); min-width: calc(6 * var(--cw) + 24px); }
+.spinner-field .field { width: 100%; padding-right: 22px; }
+.spinner-buttons {
+  position: absolute; right: 1px; top: 4px; bottom: 4px; width: 18px;
+  display: flex; flex-direction: column;
+}
+.spinner-buttons button {
+  flex: 1; border: 0; padding: 0; background: transparent; color: var(--text-muted);
+  font-size: 10px; line-height: 1; cursor: pointer; border-radius: 3px;
+}
+.spinner-buttons button:hover:not(:disabled) { background: var(--accent-soft); color: var(--accent); }
+
+/* Text area: one line per field, each on its field's row. */
+.textarea-field { display: block; }
+.textarea-field .field.textarea {
+  /* Full rows, so each line sits on its field's row. */
+  width: 100%; height: 100%; margin-top: 0; padding: 0 6px; resize: none; overflow: hidden;
+  line-height: calc(var(--rh) - 2px / var(--lines, 1)); white-space: pre;
+}
+.textarea-field.designing .field.textarea { height: calc(var(--rh) - 6px); margin-top: 3px; line-height: calc(var(--rh) - 8px); }
+.textarea-field .field.textarea.full { animation: textarea-full 0.3s; }
+@keyframes textarea-full { 0%, 100% { border-color: var(--border); } 50% { border-color: var(--danger); } }
+.textarea-room {
+  /* Beside the box's bottom corner, clear of the text. */
+  position: absolute; left: calc(100% + 8px); bottom: 2px; white-space: nowrap;
+  font-size: 11px; color: var(--text-muted); pointer-events: none;
+}
+.textarea-room.none { color: var(--danger); }
+
 .screen-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
 .screen-actions button {
   border: 1px solid var(--accent); color: var(--accent); background: var(--accent-soft);

@@ -15,9 +15,9 @@ export function keyAction(e: KeyboardEvent): KeyAction | null {
   }
   switch (e.key) {
     case 'Enter': {
-      // Let Enter activate a focused button or link instead.
+      // Let Enter activate a focused button or link instead, or start a new line in a text area.
       const t = e.target as HTMLElement | null;
-      return t?.tagName === 'BUTTON' || t?.tagName === 'A' ? null : 'Enter';
+      return t?.tagName === 'BUTTON' || t?.tagName === 'A' || t?.tagName === 'TEXTAREA' ? null : 'Enter';
     }
     case 'PageUp': return 'PageUp';
     case 'PageDown': return 'PageDown';

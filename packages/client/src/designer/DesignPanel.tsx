@@ -2,9 +2,9 @@
 // previews live, and saves it through /api/screens.
 
 import {
-  DATE_FORMATS, ID_PATTERN, ROLES, fillUrl, fingerprint, matches, type ButtonAction, type DateFormat, type Role, type ScreenDefinition, type ScreenEvent,
+  ID_PATTERN, ROLES, fillUrl, fingerprint, matches, type ButtonAction, type Role, type ScreenDefinition, type ScreenEvent,
   type ActiveTheme, type SiteCustomization, type SiteEvent,
-  type Target, type Widget,
+  type Target,
 } from '@veneer/screens';
 import type { AidName, ScreenSnapshot } from '@veneer/tn5250';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -19,10 +19,11 @@ import { ChangesList } from './ChangesList.tsx';
 import { labelAt } from './names.ts';
 import { Section, SectionContext, SectionGroup, useSectionState } from './Section.tsx';
 import { ComponentEditor, ComponentsSection, componentForFieldChange } from './Components.tsx';
+import { TextAreaPart, WidgetEditor, defaultWidget, showAsChoices } from './Widgets.tsx';
 import type { ScreenView } from '../transform/types.ts';
 import {
   addScreenId, buttonsOf, cardAround, cardsOf, componentAt, componentForField, formatOptions, freeSpot, htmlAt, htmlOf, isHidden, originalText, parseOptions, removeScreenId, roleOf, setButtons,
-  ROLE_LABELS, moveOf, setCard, setComponent, setCss, setHidden, setHtml, setMove, setScript, setRole, setText, setWidget, textOf, widgetOf, type Selection,
+  ROLE_LABELS, moveOf, setCard, setComponent, setCss, setHidden, setHtml, setMove, setScript, setRole, setText, setWidget, textAreaOf, textOf, widgetOf, type Selection,
 } from './edit.ts';
 
 const TOKEN_KEY = 'veneer.designerToken';
@@ -97,6 +98,9 @@ interface Props {
   onClose: () => void;
   /** The theme in use for everyone. */
   theme: ActiveTheme | null;
+  /** The text area whose fields a click on the screen adds or takes out (its first field), if any. */
+  joining: string | null;
+  onJoining: (first: string | null) => void;
 }
 
 type Tab = 'site' | 'themes' | 'page' | 'selected';
@@ -492,7 +496,8 @@ export function DesignPanel(props: Props) {
           <section>
             <h3>Selected</h3>
             {selection && selection.kind !== 'empty' && <p className="dp-hint">Changes here are part of this page's customization.</p>}
-            {selection ? <SelectionEditor draft={draft} setDraft={setDraft} selection={selection} name={labelAt(props.view, snap, selection.at, { shown: true })} cols={snap.cols} onSelect={props.onSelect} components={props.components} /> : (
+            {selection ? <SelectionEditor draft={draft} setDraft={setDraft} selection={selection} name={labelAt(props.view, snap, selection.at, { shown: true })} cols={snap.cols} onSelect={props.onSelect} components={props.components}
+              snap={snap} joining={selection.kind === 'field' && props.joining === selection.field.id} onJoining={(on) => props.onJoining(on && selection.kind === 'field' ? selection.field.id : null)} /> : (
               <p className="dp-hint">Click any text, field or table on the screen, or an empty spot to add HTML.</p>
             )}
             {selection && selection.kind !== 'empty' && selection.item && !(selection.kind === 'item' && selection.header) && (() => {
@@ -554,8 +559,12 @@ export function DesignPanel(props: Props) {
   );
 }
 
-function SelectionEditor({ draft, setDraft, selection, name, cols, onSelect, components }: {
+function SelectionEditor({ draft, setDraft, selection, name, cols, onSelect, components, snap, joining, onJoining }: {
   draft: ScreenDefinition; setDraft: (d: ScreenDefinition) => void; selection: Selection; cols: number; onSelect: (at: Target) => void;
+  snap: ScreenSnapshot;
+  /** Clicks on fields add them to (or take them out of) the selected text area. */
+  joining: boolean;
+  onJoining: (on: boolean) => void;
   /** What people would call the selection, such as a field's label (names.ts). */
   name: string | undefined;
   components: string[];
@@ -596,12 +605,18 @@ function SelectionEditor({ draft, setDraft, selection, name, cols, onSelect, com
     const f = selection.field;
     const widget = widgetOf(draft, f.id);
     const component = componentForField(draft, f.id);
+    const area = textAreaOf(draft, f.id);
     const showAs = (value: string) => {
       let next = component ? setComponent(draft, component.at, null) : draft;
       if (value === 'component') next = setComponent(setWidget(next, f.id, null), f, componentForFieldChange(components[0]!, f));
-      else next = setWidget(next, f.id, defaultWidget(value, f.value));
+      else next = setWidget(next, f.id, defaultWidget(value, f));
       setDraft(next);
+      onJoining(false);
       if (value === 'component') onSelect({ row: f.row, col: f.col });
+    };
+    const fieldAt = (id: string) => {
+      const [row, col] = id.split(':').map(Number) as [number, number];
+      return { row, col };
     };
     return (
       <>
@@ -611,17 +626,23 @@ function SelectionEditor({ draft, setDraft, selection, name, cols, onSelect, com
         </p>
         {hideToggle}
         {!selection.item && <p className="dp-hint">Part of a table: drag the table to move it.</p>}
-        {selection.item && <PositionEditor draft={draft} setDraft={setDraft} at={at} cols={cols} />}
-        <label className="dp-row">Show as
-          <select value={component ? 'component' : widget?.type ?? 'text'} onChange={(e) => showAs(e.target.value)}>
-            <option value="text">Text box</option>
-            <option value="select">Dropdown</option>
-            <option value="checkbox">Checkbox</option>
-            <option value="date">Date picker</option>
-            {(components.length > 0 || component) && <option value="component">Component</option>}
-          </select>
-        </label>
-        {widget && <WidgetEditor key={`${f.id}:${widget.type}`} widget={widget} onChange={(w) => setDraft(setWidget(draft, f.id, w))} />}
+        {selection.item && !(area && area.first !== f.id) && <PositionEditor draft={draft} setDraft={setDraft} at={at} cols={cols} />}
+        {area && area.first !== f.id ? (
+          <TextAreaPart first={area.first} field={f.id} draft={draft} setDraft={setDraft} onSelect={(id) => onSelect(fieldAt(id))} />
+        ) : (
+          <>
+            <label className="dp-row">Show as
+              <select value={component ? 'component' : widget?.type ?? 'text'} onChange={(e) => showAs(e.target.value)}>
+                {showAsChoices(f, widget).map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+                {(components.length > 0 || component) && <option value="component">Component</option>}
+              </select>
+            </label>
+            {widget && (
+              <WidgetEditor key={`${f.id}:${widget.type}`} widget={widget} field={f} onChange={(w) => setDraft(setWidget(draft, f.id, w))}
+                text={{ draft, setDraft, snap, joining, onJoining }} />
+            )}
+          </>
+        )}
       </>
     );
   }
@@ -770,49 +791,4 @@ function HtmlEditor({ draft, setDraft, html, cols, onSelect }: {
       <button type="button" className="ghost danger" onClick={() => setDraft(setHtml(draft, html.at, null))}>Remove HTML</button>
     </>
   );
-}
-
-
-function defaultWidget(type: string, value: string): Widget | null {
-  switch (type) {
-    case 'select': return { type: 'select', options: value ? [{ value, label: value }] : [] };
-    case 'checkbox': return { type: 'checkbox', on: 'Y', off: 'N' };
-    case 'date': return { type: 'date', format: 'YYYYMMDD' };
-    default: return null;
-  }
-}
-
-function WidgetEditor({ widget, onChange }: { widget: Widget; onChange: (w: Widget) => void }) {
-  // Keep the options text as typed; parse it on every change.
-  const [optionsText, setOptionsText] = useState(widget.type === 'select' ? formatOptions(widget.options) : '');
-  switch (widget.type) {
-    case 'select':
-      return (
-        <label className="dp-row">Choices, one per line as value=Label
-          <textarea
-            rows={5}
-            value={optionsText}
-            onChange={(e) => {
-              setOptionsText(e.target.value);
-              onChange({ type: 'select', options: parseOptions(e.target.value) });
-            }}
-          />
-        </label>
-      );
-    case 'checkbox':
-      return (
-        <div className="dp-pair">
-          <label className="dp-row">Checked value<input value={widget.on} onChange={(e) => onChange({ ...widget, on: e.target.value })} /></label>
-          <label className="dp-row">Unchecked value<input value={widget.off} onChange={(e) => onChange({ ...widget, off: e.target.value })} /></label>
-        </div>
-      );
-    case 'date':
-      return (
-        <label className="dp-row">Host date format
-          <select value={widget.format} onChange={(e) => onChange({ type: 'date', format: e.target.value as DateFormat })}>
-            {DATE_FORMATS.map((f) => <option key={f} value={f}>{f}</option>)}
-          </select>
-        </label>
-      );
-  }
 }

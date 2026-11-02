@@ -34,9 +34,15 @@ export interface Layout {
   };
 }
 
+/** Rows an item is drawn over: a text area covers its fields' rows. */
+export function drawnHeight(i: Item): number {
+  if (i.kind === 'field' && i.parts && i.parts.length > 0) return Math.max(1, Math.max(...i.parts.map((p) => p.row)) - i.field.row + 1);
+  return heightOf(i);
+}
+
 /** Layout rows the items of a group cover, top and bottom of each. */
 function rowsOf(g: Group): number[] {
-  return g.items.flatMap((i) => [i.row, i.row + heightOf(i) - 1].map((r) => g.row + r - g.from));
+  return g.items.flatMap((i) => [i.row, i.row + drawnHeight(i) - 1].map((r) => g.row + r - g.from));
 }
 
 export function layoutOf(view: ScreenView): Layout {

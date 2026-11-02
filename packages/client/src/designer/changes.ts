@@ -19,7 +19,9 @@ const fieldAt = (id: string): Target => {
   return { row, col };
 };
 
-const WIDGET_LABELS = { select: 'a drop-down list', checkbox: 'a checkbox', date: 'a date picker' } as const;
+const WIDGET_LABELS = {
+  select: 'a drop-down list', checkbox: 'a checkbox', date: 'a date picker', radio: 'radio buttons', spinner: 'a spinner', textarea: 'a text area',
+} as const;
 
 export function describeChange(change: Change, view: ScreenView, snap: ScreenSnapshot): ChangeLine {
   const name = (at: Target) => nameAt(view, snap, at);
@@ -31,8 +33,10 @@ export function describeChange(change: Change, view: ScreenView, snap: ScreenSna
       return { label: `Change ${name(change.at)} to “${clip(change.text)}”`, at: change.at };
     case 'role':
       return { label: `Show ${name(change.at)} as ${ROLE_LABELS[change.role]}`, at: change.at };
-    case 'widget':
-      return { label: `Show ${fieldName(change.field)} as ${WIDGET_LABELS[change.widget.type]}`, at: fieldAt(change.field) };
+    case 'widget': {
+      const lines = change.widget.type === 'textarea' ? ` (${change.widget.fields.length} line${change.widget.fields.length === 1 ? '' : 's'})` : '';
+      return { label: `Show ${fieldName(change.field)} as ${WIDGET_LABELS[change.widget.type]}${lines}`, at: fieldAt(change.field) };
+    }
     case 'move':
       return { label: `Move ${name(change.at)} to row ${change.to.row}, column ${change.to.col}`, at: change.at };
     case 'button':

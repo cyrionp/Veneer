@@ -10,7 +10,7 @@ import type { Action, Card, Item, ScreenView, TableItem, WindowView } from '../t
 import { useComponents } from '../custom/components.ts';
 import { ComponentBox } from './ComponentBox.tsx';
 import { FieldInput, type FieldBinding } from './fieldInput.tsx';
-import { layoutOf, tabAtCursor, viewRow, type Group } from './layout.ts';
+import { drawnHeight, layoutOf, tabAtCursor, viewRow, type Group } from './layout.ts';
 
 interface Props {
   view: ScreenView;
@@ -270,7 +270,14 @@ function Items({ items, origin, binding, locked, onAction, onCursor, view, desig
             if (item.component && (component(item.component).status === 'ready' || component(item.component).status === 'loading')) return null;
             // One cell wider: the attribute byte after a field is always blank, and the
             // box's padding would otherwise hide the last character.
-            const width = Math.min(item.width + 1, cols - item.col + 1);
+            let width = Math.min(item.width + 1, cols - item.col + 1);
+            let style = at(item.row, item.col, top, width);
+            if (item.parts && item.parts.length > 0) {
+              // A text area covers its fields' rows (one row in the designer, so each field can be clicked).
+              const rows = design ? 1 : drawnHeight(item);
+              width = Math.min(Math.max(...item.parts.map((p) => p.length)) + 1, cols - item.col + 1);
+              style = { ...at(item.row, item.col, top, width), height: `calc(${Math.max(1, rows)} * var(--rh))` };
+            }
             return (
               <FieldInput
                 key={key}
@@ -278,10 +285,11 @@ function Items({ items, origin, binding, locked, onAction, onCursor, view, desig
                 binding={binding}
                 label={item.label}
                 widget={item.widget}
+                parts={item.parts}
                 readOnly={Boolean(design)}
                 dataAt={atKey(home)}
                 className={`${item.command ? 'command' : ''}${item.role ? ` role-${item.role}` : ''}${designClass(design, home, item.hidden)}`}
-                style={at(item.row, item.col, top, width)}
+                style={style}
               />
             );
           }

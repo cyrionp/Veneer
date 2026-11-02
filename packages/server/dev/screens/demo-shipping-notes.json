@@ -1,0 +1,24 @@
+{
+  "id": "demo-shipping-notes",
+  "name": "Demo shipping notes",
+  "match": {
+    "screenIds": ["05e3f1ba034db1"],
+    "text": []
+  },
+  "title": "Shipping Notes",
+  "changes": [
+    { "op": "widget", "field": "6:22", "widget": { "type": "radio", "options": [
+      { "value": "A", "label": "Air" },
+      { "value": "O", "label": "Ocean" },
+      { "value": "T", "label": "Truck" },
+      { "value": "P", "label": "Pickup" }
+    ], "layout": "row" } },
+    { "op": "hide", "at": { "row": 6, "col": 30 } },
+    { "op": "widget", "field": "7:22", "widget": { "type": "spinner", "min": 1, "max": 999 } },
+    { "op": "hide", "at": { "row": 7, "col": 30 } },
+    { "op": "widget", "field": "8:22", "widget": { "type": "spinner", "min": 0, "step": 0.5 } },
+    { "op": "hide", "at": { "row": 8, "col": 30 } },
+    { "op": "widget", "field": "11:22", "widget": { "type": "textarea", "fields": ["11:22", "12:22", "13:22", "14:22"] } },
+    { "op": "button", "label": "Back to menu", "action": { "aid": "F12" } }
+  ]
+}

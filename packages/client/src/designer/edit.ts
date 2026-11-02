@@ -1,6 +1,6 @@
 // Pure helpers the designer uses to build and edit screen definitions.
 
-import { screenId, type ButtonAction, type Change, type Role, type ScreenDefinition, type ScreenEvent, type TabBand, type Target, type TextMatch, type Widget } from '@veneer/screens';
+import { MAX_TEXTAREA_FIELDS, screenId, type ButtonAction, type Change, type Role, type ScreenDefinition, type ScreenEvent, type TabBand, type Target, type TextMatch, type Widget } from '@veneer/screens';
 import type { FieldSnapshot, ScreenSnapshot } from '@veneer/tn5250';
 import { heightOf, homeOf, isBox, itemAt } from '../transform/customize.ts';
 import type { Item, ScreenView } from '../transform/types.ts';
@@ -280,3 +280,63 @@ export function parseOptions(text: string): Array<{ value: string; label: string
 
 export const formatOptions = (options: Array<{ value: string; label: string }>) =>
   options.map((o) => `${o.value}=${o.label}`).join('\n');
+
+// ---- text areas ------------------------------------------------------------
+
+type TextArea = Extract<Widget, { type: 'textarea' }>;
+
+/** The text area a field is in, as its first field or one of the others. */
+export function textAreaOf(def: ScreenDefinition, field: string): { first: string; widget: TextArea } | undefined {
+  for (const c of def.changes) {
+    if (c.op === 'widget' && c.widget.type === 'textarea' && (c.field === field || c.widget.fields.includes(field))) {
+      return { first: c.field, widget: c.widget };
+    }
+  }
+  return undefined;
+}
+
+const fieldOrder = (id: string) => {
+  const [row, col] = id.split(':').map(Number) as [number, number];
+  return row * 1000 + col;
+};
+
+/** Whether a field is free to join a text area: no widget, component or other text area of its own. */
+function isFree(def: ScreenDefinition, first: string, id: string): boolean {
+  const area = textAreaOf(def, id);
+  if (area && area.first !== first) return false;
+  if (componentForField(def, id)) return false;
+  return !def.changes.some((c) => c.op === 'widget' && c.field === id && c.widget.type !== 'textarea');
+}
+
+/**
+ * Add a field to the text area starting at `first`, or take it out if it is in
+ * it. Fields stay in screen order, after the first; one above the first, or in
+ * use by another widget, component or text area, is left alone.
+ */
+export function toggleTextAreaField(def: ScreenDefinition, first: string, id: string): ScreenDefinition {
+  const area = widgetOf(def, first);
+  if (area?.type !== 'textarea' || id === first) return def;
+  if (area.fields.includes(id)) return setWidget(def, first, { type: 'textarea', fields: area.fields.filter((f) => f !== id) });
+  if (fieldOrder(id) < fieldOrder(first) || !isFree(def, first, id) || area.fields.length >= MAX_TEXTAREA_FIELDS) return def;
+  const fields = [first, ...[...area.fields.slice(1), id].sort((a, b) => fieldOrder(a) - fieldOrder(b))];
+  return setWidget(def, first, { type: 'textarea', fields });
+}
+
+/**
+ * The input fields that continue a text area down the screen: on each
+ * following row, the field in the same column with the same length, while
+ * there is one and it's free.
+ */
+export function fieldsBelow(def: ScreenDefinition, snap: ScreenSnapshot, first: string): string[] {
+  const head = snap.fields.find((f) => f.id === first);
+  const area = widgetOf(def, first);
+  if (!head || area?.type !== 'textarea') return [];
+  const out: string[] = [];
+  for (let row = head.row + 1; row <= snap.rows; row++) {
+    const f = snap.fields.find((x) => !x.bypass && x.row === row && x.col === head.col && x.length === head.length);
+    if (!f || !isFree(def, first, f.id)) break;
+    if (!area.fields.includes(f.id)) out.push(f.id);
+    if (area.fields.length + out.length >= MAX_TEXTAREA_FIELDS) break;
+  }
+  return out;
+}

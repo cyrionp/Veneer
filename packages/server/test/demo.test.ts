@@ -13,7 +13,9 @@ import { customize } from '../../client/src/transform/customize.ts';
 import { transform } from '../../client/src/transform/index.ts';
 import * as cards from '../dev/components/cards.js';
 import * as map from '../dev/components/map.js';
-import { CONTACTS, CONTACTS_PAGE, CUSTOMERS, DemoHost, contacts, customerAddresses, orderEntry } from '../dev/demoHost.ts';
+import { CONTACTS, CONTACTS_PAGE, CUSTOMERS, DemoHost, NOTE_ROWS, SHIP_VIA, contacts, customerAddresses, orderEntry, shippingNotes } from '../dev/demoHost.ts';
+import { stepValue } from '../../client/src/ui/spinner.ts';
+import { fitText, textOf } from '../../client/src/ui/textArea.ts';
 
 const cp = getCodepage(37);
 const screensDir = new URL('../dev/screens/', import.meta.url);
@@ -199,4 +201,64 @@ test('on the demo host, options 5 and 6 open the plain screens, and they page li
   snap = await send('Enter', { [`7:3`]: '5' });
   assert.match(snap.lines[23]!, new RegExp(`Display ${CONTACTS[CONTACTS_PAGE]![0]}`));
   assert.match(snap.lines[0]!, /\(no cards\)/);
+});
+
+// ---- option 7: radio buttons, spinners and a text area
+
+const shippingDef = () => definitions.find((d) => d.id === 'demo-shipping-notes')!;
+
+test('the shipping notes definition shows its fields as radio buttons, spinners and a text area', () => {
+  const snap = screen(shippingNotes());
+  assert.equal(matchScreen(snap, definitions)?.id, 'demo-shipping-notes');
+  const view = customize(transform(snap), shippingDef());
+  const field = (id: string) => view.items.find((i) => i.kind === 'field' && i.field.id === id) as { widget?: { type: string; options?: Array<{ value: string }> }; parts?: Array<{ id: string; value: string }> } | undefined;
+  const via = field('6:22')!.widget!;
+  assert.equal(via.type, 'radio');
+  assert.deepEqual(via.options!.map((o) => o.value), Object.keys(SHIP_VIA), 'every code the host knows');
+  assert.equal(field('7:22')!.widget!.type, 'spinner');
+  assert.equal(field('8:22')!.widget!.type, 'spinner');
+  const notes = field('11:22')!;
+  assert.deepEqual(notes.parts!.map((p) => p.id), NOTE_ROWS.map((r) => `${r}:22`));
+  for (const r of NOTE_ROWS.slice(1)) assert.equal(field(`${r}:22`), undefined, 'under the text area');
+  assert.match(textOf(notes.parts!.map((p) => p.value)), /^Leave at the loading dock if nobody is\nthere\. Call ahead on weekends\.\n\n$/);
+});
+
+test('on the demo host, the widgets send what typing would', async (t) => {
+  const host = new DemoHost();
+  const port = await host.listen();
+  const session = new Session({ host: '127.0.0.1', port, connectTimeoutMs: 5000 });
+  t.after(() => { session.close(); host.server.close(); });
+  await session.connect();
+  await session.waitForInput(5000);
+  const send = async (aid: Parameters<Session['submit']>[0]['aid'], fields?: Record<string, string>) => {
+    session.submit({ aid, ...(fields ? { fields } : {}) });
+    return session.waitForInput(5000);
+  };
+  await send('Enter', { '6:53': 'DEMO' });
+  let snap = await send('Enter', { '20:7': '7' });
+  assert.match(snap.lines[0]!, /Shipping Notes/);
+  const f = (id: string) => snap.fields.find((x) => x.id === id)!;
+  const spin = (id: string, up: boolean) => {
+    const w = shippingDef().changes.find((c) => c.op === 'widget' && c.field === id)!;
+    return stepValue(f(id).value, f(id), (w as { widget: { min?: number; max?: number; step?: number } }).widget, up)!;
+  };
+
+  // A note typed on the third line, as the text area fits it.
+  const parts = NOTE_ROWS.map((r) => f(`${r}:22`));
+  const before = textOf(parts.map((p) => p.value));
+  const typed = before.replace(/\n\n$/, '\nGate code 4471.\n');
+  const fitted = fitText(typed, typed.length - 1, parts)!;
+  const notes = Object.fromEntries(parts.flatMap((p, i) => (fitted.values[i] !== p.value ? [[p.id, fitted.values[i]!]] : [])));
+  assert.deepEqual(Object.keys(notes), ['13:22'], 'only the changed line is sent');
+
+  snap = await send('Enter', { '6:22': 'A', '7:22': spin('7:22', true), '8:22': spin('8:22', true), ...notes });
+  assert.match(snap.lines[23]!, /Received: ship A \(Air\), cartons 4, weight 13\.0, 1 comment line changed/);
+
+  // A comment the host rejects: shown again as typed, the cursor on the bad character.
+  snap = await send('Enter', { '6:22': 'O', '13:22': 'Use door <B>' });
+  assert.match(snap.lines[23]!, /Comments cannot contain < or > \(line 3\)/);
+  assert.deepEqual(snap.cursor, { row: 13, col: 22 + 'Use door '.length });
+  assert.equal(snap.fields.find((x) => x.id === '13:22')!.value, 'Use door <B>');
+  assert.equal(snap.fields.find((x) => x.id === '6:22')!.value, 'O');
+  assert.equal(snap.fields.find((x) => x.id === '11:22')!.value, 'Leave at the loading dock if nobody is', 'lines not sent keep the host\'s text');
 });

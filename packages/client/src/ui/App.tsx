@@ -8,7 +8,7 @@ import { toCsv, toXlsx } from '../export/sheet.ts';
 import { connectHost, notifyScreen, runScript, runSiteScript, screenInfo, setScreen } from '../custom/runtime.ts';
 import { DesignPanel } from '../designer/DesignPanel.tsx';
 import { record, redo, startHistory, undo, type History } from '../designer/history.ts';
-import { cardsOf, componentAt, htmlAt, moveOf, newDefinition, resolveSelection, setCard, setComponent, setHtml, setMove } from '../designer/edit.ts';
+import { cardsOf, componentAt, htmlAt, moveOf, newDefinition, resolveSelection, setCard, setComponent, setHtml, setMove, toggleTextAreaField } from '../designer/edit.ts';
 import { customize } from '../transform/customize.ts';
 import { transform } from '../transform/index.ts';
 import type { Action, FunctionKey, ScreenView } from '../transform/types.ts';
@@ -21,6 +21,7 @@ import { DEFAULT_BRAND, useBrand } from './brand.ts';
 import { checkFields } from './fieldRules.ts';
 import { applyTheme, useThemeLogo } from './themes.ts';
 import { ModernScreen, revealField, type BoxKind } from './ModernScreen.tsx';
+import { indexAt, lineAt } from './textArea.ts';
 import { MAX_TYPEAHEAD, caretAtCursor, caretPosition, replay, type Caret, type ReplayResult, type TypedKey } from './typeahead.ts';
 import { useScreens } from './useScreens.ts';
 import { sysreqField } from './sysreq.ts';
@@ -62,6 +63,8 @@ export function App() {
   const resetDraft = (def: ScreenDefinition | null) => setHistory(startHistory(def));
   const [draftExisting, setDraftExisting] = useState(false);
   const [selectedAt, setSelectedAt] = useState<Target | null>(null);
+  // The text area (its first field) whose lines a click on a field adds or takes out.
+  const [joining, setJoining] = useState<string | null>(null);
   const designing = draft !== null;
   // Preview: the screen as users see it, without design ghosts or outlines,
   // and look-only so a click cannot send anything to the host.
@@ -81,6 +84,18 @@ export function App() {
     [designing, view, snap, selectedAt],
   );
   const savedDraft = draft ? screens.screens.find((d) => d.id === draft.id) : undefined;
+  useEffect(() => { setJoining(null); }, [selectedAt, designing]);
+  /** A click on the screen in the designer: picks a text area's fields, or selects. */
+  const selectOnScreen = (at: Target) => {
+    if (joining && draft && view && snap) {
+      const picked = resolveSelection(view, snap, at);
+      if (picked?.kind === 'field' && picked.field.id !== joining) {
+        setDraft(toggleTextAreaField(draft, joining, picked.field.id));
+        return;
+      }
+    }
+    setSelectedAt(at);
+  };
 
   const startDesign = () => {
     if (!snap || !baseView) return;
@@ -459,12 +474,16 @@ export function App() {
     // The screen is inert while help shows: focus it once help has closed.
     if (!target || designingNow.current || help) return;
     focusTarget.current = null;
-    const el = document.querySelector<HTMLElement>(`[data-field="${target.id}"]`)
-      ?? document.querySelector<HTMLElement>('[data-field]');
+    const el = fieldElement(target.id) ?? document.querySelector<HTMLElement>('[data-field]');
     if (el) revealField(el);
     el?.focus();
     if (el instanceof HTMLInputElement && el.dataset.field === target.id) {
       try { el.setSelectionRange(target.offset, target.offset); } catch { /* password inputs on some browsers */ }
+    }
+    if (el instanceof HTMLTextAreaElement) {
+      // A text area: the caret goes to the target field's line.
+      const line = (el.dataset.fields ?? '').split(' ').indexOf(target.id);
+      if (line >= 0) { const i = indexAt(el.value, line, target.offset); el.setSelectionRange(i, i); }
     }
   });
 
@@ -627,7 +646,7 @@ export function App() {
             {mode === 'modern'
               ? <ModernScreen view={screenView} binding={binding} locked={!keysEnabled} onAction={onAction}
                   onCursor={(row, col) => { clickedCursor.current = { row, col }; }}
-                  design={designView ? { selected: selection?.at ?? null, onSelect: setSelectedAt, onMove: moveItem, onResize: resizeBox } : undefined} />
+                  design={designView ? { selected: selection?.at ?? null, onSelect: selectOnScreen, onMove: moveItem, onResize: resizeBox } : undefined} />
               : <ClassicScreen snap={screenSnap} binding={binding} />}
           </form>
         ) : (
@@ -687,6 +706,8 @@ export function App() {
           components={screens.components}
           onSelect={setSelectedAt}
           clickedAt={selectedAt}
+          joining={joining}
+          onJoining={setJoining}
           tokenRequired={screens.tokenRequired}
           onPick={pickDefinition}
           onSaved={screens.reload}
@@ -741,24 +762,33 @@ function endOf(snap: ScreenSnapshot, values: Record<string, string>, id: string)
   return { id, offset: value.length };
 }
 
-/** The caret in a focused field input. */
+/** The element that takes focus for a field: its input, or the text area it is a line of. */
+function fieldElement(id: string): HTMLElement | null {
+  return document.querySelector<HTMLElement>(`[data-field="${id}"]`)
+    ?? [...document.querySelectorAll<HTMLElement>('[data-fields]')].find((el) => el.dataset.fields!.split(' ').includes(id)) ?? null;
+}
+
+/** The caret in a focused field input (in a text area, in the field of the caret's line). */
 function caretOf(snap: ScreenSnapshot, el: HTMLElement): Caret | null {
-  const f = snap.fields.find((x) => x.id === el.dataset.field);
+  if (el instanceof HTMLTextAreaElement && el.dataset.fields) {
+    const ids = el.dataset.fields.split(' ');
+    const line = Math.min(lineAt(el.value, el.selectionStart).line, ids.length - 1);
+    const f = snap.fields.find((x) => x.id === ids[line]);
+    return f ? { id: f.id, offset: Math.min(lineAt(el.value, el.selectionStart).col, f.length - 1) } : null;
+  }
+  // A radio button other than the group's tab stop names its field in data-field-of.
+  const id = el.dataset.field ?? el.dataset.fieldOf;
+  const f = id ? snap.fields.find((x) => x.id === id) : undefined;
   if (!f) return null;
-  const offset = el instanceof HTMLInputElement ? Math.min(el.selectionStart ?? 0, f.length - 1) : 0;
+  const offset = el instanceof HTMLInputElement && el.type !== 'radio' ? Math.min(el.selectionStart ?? 0, f.length - 1) : 0;
   return { id: f.id, offset };
 }
 
 /** The cursor to report: the caret in the focused field, else the last clicked text. */
 function currentCursor(snap: ScreenSnapshot, clicked: { row: number; col: number } | null) {
-  const el = document.activeElement as HTMLInputElement | null;
-  const id = el?.dataset?.field;
-  const f = id ? snap.fields.find((x) => x.id === id) : undefined;
-  if (f) {
-    const caret = el instanceof HTMLInputElement ? Math.min(el.selectionStart ?? 0, f.length - 1) : 0;
-    const offset = (f.col - 1) + caret;
-    return { row: f.row + Math.floor(offset / snap.cols), col: (offset % snap.cols) + 1 };
-  }
+  const el = document.activeElement as HTMLElement | null;
+  const caret = el?.dataset ? caretOf(snap, el) : null;
+  if (caret) return caretPosition(snap, caret) ?? snap.cursor;
   return clicked ?? snap.cursor;
 }
 
