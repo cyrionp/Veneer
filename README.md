@@ -282,7 +282,9 @@ definition** goes further. Each definition is one JSON file in `screens/` (or
 - **Designer:** a **Design** button appears when the designer is enabled. With
   `VENEER_DESIGNER=local`, browsers on the server's own machine use it without a token;
   `npm run dev` and `npm run demo` turn this on. For anyone else, set `VENEER_DESIGNER_TOKEN`,
-  which the designer asks for once per tab. The two can be combined. The design panel has
+  which the designer asks for once per tab. The two can be combined; for an installed
+  server, see [Getting into the designer](deploy/README.md#getting-into-the-designer),
+  with examples for a token and for an SSH tunnel. The design panel has
   four tabs: **Site-wide** (CSS and JavaScript for every page), **Themes** (the look of every
   page: [Themes](#themes)), **Page** (this screen's
   customization: name, title, how it's recognised, buttons, CSS and JavaScript) and

@@ -26,22 +26,130 @@ Installs are laid out so that upgrades never touch configuration or customizatio
 The configuration file uses the same settings as `.env` in development; the archive
 includes a commented `veneer.env.example`. At a minimum, set `VENEER_HOST`, `VENEER_PORT`
 and `VENEER_TLS`. Also set `VENEER_LISTEN_HOST`; the default is 127.0.0.1, which only
-accepts connections from the server itself. If other machines will connect, set
-`VENEER_HTTPS_CERT` and `VENEER_HTTPS_KEY` too, so sign-on passwords are encrypted. The
-file may contain the designer token, so make it readable only by the service.
-
-For the designer, `VENEER_DESIGNER=local` lets a browser on the server itself, or one
-connected through an SSH tunnel, use it without a token. Behind a reverse proxy, requests
-are never treated as local. Other people need `VENEER_DESIGNER_TOKEN`. The admin page
-(`/admin`, active sessions and recent errors) works the same way with `VENEER_ADMIN=local`
-and `VENEER_ADMIN_TOKEN`; keep that token for operators only, since it can end anyone's
-session.
+accepts connections from the server itself, so browsers on other machines can't load the
+page at all. HTTPS (`VENEER_HTTPS_CERT` and `VENEER_HTTPS_KEY`) is optional, but without it
+sign-on passwords cross the network unencrypted: fine for a trial on a trusted network, not
+for production. The file may contain the designer token, so make it readable only by the
+service. [Configuration examples](#configuration-examples) shows complete files.
 
 After starting, check the server:
 
 ```sh
 curl http://127.0.0.1:8080/healthz    # {"status":"ok","version":"0.1.0",...}
 ```
+
+## Configuration examples
+
+These are for Veneer running on the IBM i itself, in `/QOpenSys/etc/veneer/veneer.env`.
+Off the IBM i, set `VENEER_HOST` to the IBM i's name and use TLS to it
+([Veneer to the IBM i](#veneer-to-the-ibm-i)). Restart Veneer after changing the file.
+
+### A trial without a certificate
+
+Plain HTTP works: Veneer needs no certificate to run.
+
+```sh
+VENEER_HOST=localhost
+VENEER_PORT=23
+VENEER_TLS=false
+VENEER_LISTEN_HOST=0.0.0.0
+VENEER_LISTEN_PORT=8080
+VENEER_DESIGNER_TOKEN=change-me-to-a-long-secret
+VENEER_SCREENS_DIR=/QOpenSys/etc/veneer/screens
+VENEER_DATA_DIR=/QOpenSys/var/lib/veneer
+VENEER_LOG_FILE=/QOpenSys/var/log/veneer/veneer.log
+```
+
+Browse to `http://<ibmi-name>:8080`, with `http://`, not `https://`. The log warns that
+it is serving plain HTTP. Passwords, and the designer token, cross the network unencrypted,
+so use this only on a network you trust, and add a certificate before real users sign on.
+
+`VENEER_TLS=false` and port 23 are needed when the IBM i's telnet server has no
+certificate either: with the default `VENEER_TLS=true` and port 992, the page loads but
+shows "Host connection failed". Telnet to `localhost` never leaves the machine, so it
+needs no TLS.
+
+### Production, with HTTPS
+
+The same, with a certificate for the name users type in the browser
+([Browsers to Veneer](#browsers-to-veneer)), and the browser address becomes
+`https://<ibmi-name>:8080`:
+
+```sh
+VENEER_HTTPS_CERT=/QOpenSys/etc/veneer/cert.pem
+VENEER_HTTPS_KEY=/QOpenSys/etc/veneer/key.pem
+```
+
+### If the page won't load
+
+Look at the startup lines in `VENEER_LOG_FILE` (or the job's `QPRINT` spooled file, see
+[If the job ends right away](#if-the-job-ends-right-away)):
+
+- **`veneer listening` with `url` `http://127.0.0.1:8080`:** `VENEER_LISTEN_HOST` isn't
+  set, so only the IBM i itself can connect. Set it to `0.0.0.0`.
+- **`veneer listening` with `0.0.0.0`:** Veneer is up. Check the browser address
+  (`http://` without a certificate, `https://` with one, and the right port), then the
+  firewall between the browser and the IBM i, then `curl http://127.0.0.1:8080/healthz` from
+  an SSH session on the IBM i.
+- **`could not start`:** the error says why, often the port being in use. Set
+  `VENEER_LISTEN_PORT` to another.
+- **`rejected websocket origin`:** the page loads but never shows a screen, because users
+  reach Veneer through another address, such as a proxy. Add that address to
+  `VENEER_ALLOWED_ORIGINS` (e.g. `http://veneer.example.com`).
+
+## Getting into the designer
+
+The designer is off until it is turned on in the config file, in one of two ways:
+
+| Setting | Who can use the designer |
+| --- | --- |
+| `VENEER_DESIGNER_TOKEN=<12+ characters>` | Anyone who types the token |
+| `VENEER_DESIGNER=local` | Browsers on the Veneer machine itself, or through an SSH tunnel to it, without a token |
+
+The two can be combined. With either set, sign on to a screen, click **Design** in the
+header, change the screen, and click **Save**. With a token, type it in the **Designer
+token** box at the bottom of the design panel first; the browser remembers it until the tab
+is closed. Every connected browser picks up a saved change at once.
+
+**With a token.** Add a long secret to the config file and restart:
+
+```sh
+VENEER_DESIGNER_TOKEN=change-me-to-a-long-secret
+```
+
+Without HTTPS, the token crosses the network unencrypted, like passwords do. Anyone with
+it can change every user's screens, and designer code can read what users type, so give it
+only to people you trust and change it if it leaks.
+
+**Without a token, through an SSH tunnel.** The IBM i has no browser, so `local` there
+means a tunnel. It works without a certificate and without opening Veneer's port to the
+network, and the tunnel encrypts everything:
+
+```sh
+VENEER_DESIGNER=local
+```
+
+Start the SSH server on the IBM i if it isn't running (`STRTCPSVR SERVER(*SSHD)`), then on
+your own machine:
+
+```sh
+ssh -L 8080:127.0.0.1:8080 myuser@myibmi.example.com
+```
+
+While that runs, browse to `http://localhost:8080`, sign on, and click **Design**. Use the
+port in `VENEER_LISTEN_PORT` on the right of `-L`; if 8080 is in use on your own machine,
+change the left one (`-L 9080:127.0.0.1:8080`, then `http://localhost:9080`). This works
+with `VENEER_LISTEN_HOST` left at `127.0.0.1`, so users can be kept out entirely while you
+design. Requests through a reverse proxy are never local, and neither are those through
+Docker's port mapping ([Docker](#docker)).
+
+**If there's no Design button:** the designer is off (check the `designer` value in the
+`veneer listening` log line: `off`, `local`, `token` or `local+token`), or the browser isn't
+local and there's no token. The button shows only once a screen is on display.
+
+**The admin page** (`/admin`: active sessions, ending a session, recent errors) works the
+same way with `VENEER_ADMIN=local` and `VENEER_ADMIN_TOKEN`, which must differ from the
+designer token. Keep that token for operators only, since it can end anyone's session.
 
 ## Securing Veneer
 
@@ -60,8 +168,8 @@ does all of these:
   or put a reverse proxy that handles HTTPS in front. See
   [Browsers to Veneer](#browsers-to-veneer).
 - [ ] **Listen only where needed.** The default `VENEER_LISTEN_HOST=127.0.0.1` accepts
-  connections from the server itself (and SSH tunnels) only. Use `0.0.0.0` only with
-  HTTPS on, and use a firewall to limit who can reach the port.
+  connections from the server itself (and SSH tunnels) only. In production, use `0.0.0.0`
+  only with HTTPS on, and use a firewall to limit who can reach the port.
 - [ ] **Run as a service user with little authority.** On IBM i, the `VENEER` profile
   (`PASSWORD(*NONE)`, `USRCLS(*USER)`); on Linux, the `veneer` system user; in Docker, the
   image's `node` user. The program stays owned by an administrator, so the service can't
@@ -70,7 +178,8 @@ does all of these:
   the HTTPS key file must not be readable by anyone else (`chmod 600`, owned by the service
   user). `veneer.sh` sets umask 027, so files Veneer creates aren't world-readable.
 - [ ] **Lock down the designer and the admin page.** Leave `VENEER_DESIGNER` and
-  `VENEER_ADMIN` unset, or `local`, unless people elsewhere need them. Then give them
+  `VENEER_ADMIN` unset, or `local`, unless people elsewhere need them
+  ([Getting into the designer](#getting-into-the-designer)). Then give them
   separate tokens of 12 characters or more. Designer code runs in every user's page and can
   read what they type, passwords included, so only trusted people should get that token.
 - [ ] **Allow only your own pages.** Browsers from other sites can't connect unless their
@@ -230,7 +339,10 @@ from a 5250 command line.
    ```
 
    Running on the IBM i itself, Veneer can use plain Telnet to `localhost` without the
-   password crossing the network. The browser side still needs HTTPS.
+   password crossing the network. The browser side should use HTTPS; to try Veneer before
+   you have a certificate, leave out the two `VENEER_HTTPS_*` lines and browse to
+   `http://`. See [Configuration examples](#configuration-examples) and
+   [Getting into the designer](#getting-into-the-designer).
 
 4. Give the service profile access:
 
