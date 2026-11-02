@@ -75,6 +75,15 @@ test('error messages from the host become an error banner', () => {
   assert.deepEqual(v.message, { text: 'CPF1107 - Password not correct for user profile.', kind: 'error' });
 });
 
+test('a host with no message line shows errors, but leaves the last row as text', () => {
+  const { messageRow: _row, ...noLine } = signOn();
+  const v = transform(noLine);
+  assert.equal(v.message, undefined);
+  assert.ok(texts(v.items).some((t) => t.includes('COPYRIGHT')));
+  const { messageRow: _row2, ...withError } = titled('Sign On', 'CPF1107 - Password not correct for user profile.');
+  assert.deepEqual(transform(withError).message, { text: 'CPF1107 - Password not correct for user profile.', kind: 'error' });
+});
+
 test('every input field is rendered exactly once', () => {
   for (const snap of [signOn(), mainMenu(), workWithJobs()]) {
     const v = transform(snap);

@@ -6,7 +6,8 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { test } from 'node:test';
 import { matchScreen, validateDefinition, type ScreenDefinition } from '@veneer/screens';
-import { Session, Terminal, buildRecord, getCodepage, snapshot, type ScreenSnapshot } from '@veneer/tn5250';
+import { type ScreenSnapshot } from '@veneer/terminal';
+import { Session, Terminal, buildRecord, getCodepage, snapshot } from '@veneer/tn5250';
 // The browser's view of a screen, as the client builds it for components.
 import { tablesOf } from '../../client/src/custom/components.ts';
 import { customize } from '../../client/src/transform/customize.ts';

@@ -2,7 +2,7 @@
 // the settings of each widget (choices, date format, limits, text area lines).
 
 import { DATE_FORMATS, type DateFormat, type ScreenDefinition, type Widget } from '@veneer/screens';
-import type { FieldSnapshot, ScreenSnapshot } from '@veneer/tn5250';
+import type { FieldSnapshot, ScreenSnapshot } from '@veneer/terminal';
 import { useState } from 'react';
 import { isNumeric } from '../ui/fieldRules.ts';
 import { fieldsBelow, formatOptions, parseOptions, toggleTextAreaField, widgetOf } from './edit.ts';

@@ -18,7 +18,7 @@
 //   veneer.setField('6:53', v)  type into a field
 //   veneer.press('F3', fields?) press a key, optionally filling fields first
 
-import type { AidName, ScreenSnapshot } from '@veneer/tn5250';
+import type { AidName, ScreenSnapshot } from '@veneer/terminal';
 
 export interface ScreenInfo {
   /** Structural screen id (see @veneer/screens fingerprint). */

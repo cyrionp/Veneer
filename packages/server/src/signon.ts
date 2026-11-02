@@ -1,7 +1,7 @@
 // Reads who is signing on, and the display name, from the IBM i sign-on
 // screen, so the admin page can show them. Only the user field is read.
 
-import type { FieldSnapshot, ScreenSnapshot } from '@veneer/tn5250';
+import type { FieldSnapshot, ScreenSnapshot } from '@veneer/terminal';
 
 /** IBM i user profile and device names. */
 const NAME = /^[A-Z#$@][A-Z0-9#$@_]{0,9}$/;

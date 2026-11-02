@@ -1,9 +1,10 @@
-// Browser sessions: each WebSocket owns one TN5250 host session. A socket
+// Browser sessions: each WebSocket owns one host session. A socket
 // that drops (e.g. a page reload) leaves the host session running for a grace
 // period, during which a new socket can reattach with the resume token.
 
 import { randomBytes, randomUUID } from 'node:crypto';
-import { DeviceNameInUseError, Session, type HostSettings, type ScreenSnapshot } from '@veneer/tn5250';
+import { DeviceNameInUseError, type ScreenSnapshot, type TerminalSession } from '@veneer/terminal';
+import { Session, type HostSettings } from '@veneer/tn5250';
 import WebSocket from 'ws';
 import { DeviceNamePool } from './devices.ts';
 import type { ScreenInventory } from './inventory.ts';
@@ -50,7 +51,7 @@ const PUSH_DELAY_MS = 10;
 export class BrowserSession {
   readonly id = randomUUID();
   readonly resumeToken = randomBytes(32).toString('base64url');
-  readonly host: Session;
+  readonly host: TerminalSession;
   /** Requested device name; changes when the host says a name is in use. */
   deviceName: string | undefined;
   readonly remote: string;
@@ -68,7 +69,7 @@ export class BrowserSession {
   graceTimer: NodeJS.Timeout | undefined;
   pushTimer: NodeJS.Timeout | undefined;
 
-  constructor(host: Session, deviceName: string | undefined, remote: string) {
+  constructor(host: TerminalSession, deviceName: string | undefined, remote: string) {
     this.host = host;
     this.deviceName = deviceName;
     this.remote = remote;
@@ -129,7 +130,7 @@ export class SessionManager {
       return;
     }
     let retries = 0;
-    const host: Session = new Session({
+    const host: TerminalSession = new Session({
       ...this.opts.host,
       ...(this.opts.trace ? { trace: (dir: 'in' | 'out', rec: Buffer) => traceRecord(bs, dir, rec) } : {}),
       ...(deviceName ? { deviceName, onDeviceNameInUse: (name: string) => this.nextDeviceName(bs, name, ++retries) } : {}),

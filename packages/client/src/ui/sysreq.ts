@@ -1,6 +1,6 @@
 // System Request: where to type "1" to transfer to the secondary job.
 
-import type { FieldSnapshot, ScreenSnapshot } from '@veneer/tn5250';
+import type { FieldSnapshot, ScreenSnapshot } from '@veneer/terminal';
 
 /**
  * The one input field of the System Request line (bottom row) or, on systems

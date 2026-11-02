@@ -3,7 +3,7 @@
 // same fields and values as on a terminal.
 
 import type { Widget } from '@veneer/screens';
-import type { FieldSnapshot } from '@veneer/tn5250';
+import type { FieldSnapshot } from '@veneer/terminal';
 import { useLayoutEffect, useRef, type CSSProperties } from 'react';
 import type { FieldBinding } from './fieldInput.tsx';
 import { filterValue, isNumeric, withSign } from './fieldRules.ts';

@@ -3,7 +3,7 @@
 // numeric fields hold digits and a trailing sign, with the decimals implied
 // (1250 for 12.50), so a spinner on one counts in those units.
 
-import type { FieldSnapshot } from '@veneer/tn5250';
+import type { FieldSnapshot } from '@veneer/terminal';
 
 export interface SpinSettings {
   min?: number;

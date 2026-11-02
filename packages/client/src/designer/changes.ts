@@ -2,7 +2,7 @@
 // what it does, and where on the screen (to select it), if anywhere.
 
 import { testOf, type Change, type Target } from '@veneer/screens';
-import type { ScreenSnapshot } from '@veneer/tn5250';
+import type { ScreenSnapshot } from '@veneer/terminal';
 import type { ScreenView } from '../transform/types.ts';
 import { ROLE_LABELS } from './edit.ts';
 import { clip, nameAt } from './names.ts';

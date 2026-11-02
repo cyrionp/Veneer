@@ -4,7 +4,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { test } from 'node:test';
 import { screenId } from '@veneer/screens';
-import { Attr, HostStream, Terminal, buildRecord, getCodepage, snapshot, type ScreenSnapshot } from '@veneer/tn5250';
+import { type ScreenSnapshot } from '@veneer/terminal';
+import { Attr, HostStream, Terminal, buildRecord, getCodepage, snapshot } from '@veneer/tn5250';
 import { ScreenInventory } from '../src/inventory.ts';
 
 const cp = getCodepage(37);

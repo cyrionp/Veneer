@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { Attr, HostStream, Terminal, buildRecord, getCodepage, snapshot, type ScreenSnapshot } from '@veneer/tn5250';
+import { type ScreenSnapshot } from '@veneer/terminal';
+import { Attr, HostStream, Terminal, buildRecord, getCodepage, snapshot } from '@veneer/tn5250';
 import { displayName, signOnUserField, submittedUser } from '../src/signon.ts';
 
 const cp = getCodepage(37);

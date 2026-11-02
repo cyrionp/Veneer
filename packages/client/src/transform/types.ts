@@ -2,7 +2,7 @@
 // its 5250 row/column so the layout stays faithful to the original screen.
 
 import type { ButtonAction, ComponentOptions, Role, ScreenEvent, TabBand, Widget } from '@veneer/screens';
-import type { AidName, FieldSnapshot, ScreenSnapshot } from '@veneer/tn5250';
+import type { AidName, FieldSnapshot, ScreenSnapshot } from '@veneer/terminal';
 
 export type { Role, TabBand, Widget };
 

@@ -3,7 +3,7 @@
 // per-screen rules can be inserted into the list later.
 
 import { activeWindow, findWindows } from '@veneer/screens';
-import type { ScreenSnapshot } from '@veneer/tn5250';
+import type { ScreenSnapshot } from '@veneer/terminal';
 import { TransformContext } from './context.ts';
 import { commandLine } from './rules/commandLine.ts';
 import { fields } from './rules/fields.ts';

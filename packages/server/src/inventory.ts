@@ -6,7 +6,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { activeWindow, findWindows, fingerprint } from '@veneer/screens';
-import type { ScreenSnapshot } from '@veneer/tn5250';
+import type { ScreenSnapshot } from '@veneer/terminal';
 import { log } from './log.ts';
 
 export interface InventoryEntry {

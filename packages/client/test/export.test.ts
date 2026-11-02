@@ -4,7 +4,7 @@ import { ListExporter } from '../src/export/exporter.ts';
 import { exportColumns, numberOf, toCsv, toXlsx } from '../src/export/sheet.ts';
 import { crc32 } from '../src/export/zip.ts';
 import type { ScreenView, TableItem } from '../src/transform/types.ts';
-import type { FieldSnapshot } from '@veneer/tn5250';
+import type { FieldSnapshot } from '@veneer/terminal';
 
 const option = { id: '11:3', bypass: false, value: '' } as FieldSnapshot;
 

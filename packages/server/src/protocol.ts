@@ -1,6 +1,6 @@
 // Messages exchanged between the browser and the Veneer server over /ws.
 
-import type { AidName, ScreenSnapshot } from '@veneer/tn5250';
+import { isAidName, type AidName, type ScreenSnapshot } from '@veneer/terminal';
 
 export type ServerMessage =
   /** First message on every socket. Keep `resumeToken` to reattach after a reload. */
@@ -34,16 +34,8 @@ export const CloseCode = {
   ENDED_BY_ADMIN: 4005,
 } as const;
 
-const NAMED_AIDS = new Set(['Enter', 'Help', 'PageUp', 'PageDown', 'Print', 'Clear', 'RecordBackspace']);
 const MAX_FIELDS = 512;
 const MAX_FIELD_LENGTH = 3564; // 27 x 132
-
-export function isAidName(v: unknown): v is AidName {
-  if (typeof v !== 'string') return false;
-  if (NAMED_AIDS.has(v)) return true;
-  const m = /^F([1-9]|1\d|2[0-4])$/.exec(v);
-  return m !== null;
-}
 
 /** Parse and validate a client message. Throws with a client-safe message on bad input. */
 export function parseClientMessage(raw: string): ClientMessage {

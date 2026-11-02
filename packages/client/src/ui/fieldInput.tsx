@@ -1,7 +1,7 @@
 // An input bound to a 5250 field, shared by the modern and classic views.
 
 import { hostToIso, isoToHost, type Widget } from '@veneer/screens';
-import type { FieldSnapshot } from '@veneer/tn5250';
+import type { FieldSnapshot } from '@veneer/terminal';
 import type { CSSProperties } from 'react';
 import type { Option } from '../transform/types.ts';
 import { filterValue, isNumeric, withSign } from './fieldRules.ts';
@@ -14,7 +14,7 @@ export interface FieldBinding {
   onAutoEnter: (f: FieldSnapshot, value: string) => void;
 }
 
-const NUMERIC_KEYBOARD = new Set(['numericOnly', 'digitsOnly', 'signedNumeric']);
+const NUMERIC_KEYBOARD: ReadonlySet<string | undefined> = new Set(['numericOnly', 'digitsOnly', 'signedNumeric']);
 
 export function FieldInput(props: {
   field: FieldSnapshot;

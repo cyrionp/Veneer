@@ -4,18 +4,17 @@
 import { EventEmitter } from 'node:events';
 import net from 'node:net';
 import tls from 'node:tls';
-import { aidByte, type AidName } from './constants.ts';
+import {
+  DeviceNameInUseError, fieldId,
+  type ConnectionSettings, type ScreenSnapshot, type SubmitInput, type TerminalSession, type TerminalSessionEvents,
+} from '@veneer/terminal';
+import { aidByte } from './constants.ts';
 import { getCodepage, type Codepage } from './ebcdic.ts';
-import { fieldId, snapshot, type ScreenSnapshot } from './screen.ts';
+import { snapshot } from './screen.ts';
 import { TelnetCodec } from './telnet.ts';
 import { ProtocolError, Terminal } from './terminal.ts';
 
-export interface SessionOptions {
-  host: string;
-  /** Defaults to 992 with TLS, 23 without. */
-  port?: number;
-  /** true, or tls.connect options (ca, rejectUnauthorized, ...). */
-  tls?: boolean | tls.ConnectionOptions;
+export interface SessionOptions extends ConnectionSettings {
   terminalType?: string;
   deviceName?: string;
   /** The device name is in use: return another to try, or undefined to give up. */
@@ -26,32 +25,7 @@ export interface SessionOptions {
   trace?: (direction: 'in' | 'out', record: Buffer) => void;
 }
 
-export interface SubmitInput {
-  aid: AidName;
-  /** Field values by field id ("row:col"); unchanged values are not sent. */
-  fields?: Record<string, string>;
-  /** 1-based cursor position to report to the host. */
-  cursor?: { row: number; col: number };
-}
-
-interface SessionEvents {
-  /** A host record was processed. */
-  screen: [ScreenSnapshot];
-  warning: [string];
-  close: [Error | undefined];
-}
-
-/** The host closed the connection because the device name is in use. */
-export class DeviceNameInUseError extends Error {
-  readonly deviceName: string;
-  constructor(deviceName: string) {
-    super(`Device name ${deviceName} is in use`);
-    this.name = 'DeviceNameInUseError';
-    this.deviceName = deviceName;
-  }
-}
-
-export class Session extends EventEmitter<SessionEvents> {
+export class Session extends EventEmitter<TerminalSessionEvents> implements TerminalSession {
   private readonly opts: SessionOptions;
   private readonly codepage: Codepage;
   private readonly terminal: Terminal;

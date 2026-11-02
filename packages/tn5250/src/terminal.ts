@@ -1,11 +1,12 @@
 // 5250 data stream interpreter: applies host records to a Screen and builds
 // the inbound records (AID responses, query reply, save screen) sent back.
 
+import { fieldId } from '@veneer/terminal';
 import {
   AIDS_WITHOUT_DATA, Aid, Command, ESC, HeaderFlag, Opcode, Order, RECORD_TYPE_DISPLAY,
 } from './constants.ts';
 import type { Codepage } from './ebcdic.ts';
-import { FFW, Screen, fieldAdjust, fieldId, fieldShift, isAttributeByte, type Field } from './screen.ts';
+import { FFW, Screen, fieldAdjust, fieldShift, isAttributeByte, type Field } from './screen.ts';
 
 export interface TerminalOptions {
   codepage: Codepage;

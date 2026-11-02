@@ -1,7 +1,7 @@
 // Shared state for transform rules: the snapshot split into text chunks,
 // and a claim map so each screen cell is rendered by exactly one item.
 
-import type { DisplayAttribute, FieldSnapshot, ScreenSnapshot } from '@veneer/tn5250';
+import type { DisplayAttribute, FieldSnapshot, ScreenSnapshot } from '@veneer/terminal';
 import type { Role, ScreenView } from './types.ts';
 
 /** A run of same-styled text, split wherever there are two or more spaces. */

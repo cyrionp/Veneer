@@ -15,7 +15,7 @@
 // throws is reported in the console; a field it replaced gets its input back.
 
 import type { ComponentOptions, Role } from '@veneer/screens';
-import type { AidName } from '@veneer/tn5250';
+import type { AidName } from '@veneer/terminal';
 import { useSyncExternalStore } from 'react';
 import type { ScreenView, TableItem } from '../transform/types.ts';
 import type { ScreenInfo } from './runtime.ts';

@@ -1,6 +1,7 @@
 // Realistic screens, built as host data streams and run through the real terminal.
 
-import { Attr, HostStream, Terminal, buildRecord, getCodepage, snapshot, type ScreenSnapshot } from '@veneer/tn5250';
+import { type ScreenSnapshot } from '@veneer/terminal';
+import { Attr, HostStream, Terminal, buildRecord, getCodepage, snapshot } from '@veneer/tn5250';
 
 const cp = getCodepage(37);
 const { WHITE, BLUE, NONDISPLAY } = Attr;

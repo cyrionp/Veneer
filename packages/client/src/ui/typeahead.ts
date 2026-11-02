@@ -2,7 +2,7 @@
 // into the next screen, as a 5250 terminal does. Replay is a pure function so
 // it can be tested without a browser.
 
-import type { AidName, FieldSnapshot, ScreenSnapshot } from '@veneer/tn5250';
+import type { AidName, FieldSnapshot, ScreenSnapshot } from '@veneer/terminal';
 import { acceptsChar } from './fieldRules.ts';
 
 export type TypedKey =

@@ -2,7 +2,7 @@
 // page back so the user is where they started. The exporter only decides the
 // next key; the app sends it and reports each new screen.
 
-import type { AidName } from '@veneer/tn5250';
+import type { AidName } from '@veneer/terminal';
 import type { Item, ScreenView, TableItem } from '../transform/types.ts';
 import { exportColumns, headerOf, pageRows, type Sheet } from './sheet.ts';
 

@@ -28,6 +28,8 @@ test('renders text, fields, attributes and cursor', () => {
   assert.match(snap.lines[5]!, /^\s+User\s+$/);
   assert.equal(snap.keyboardLocked, false);
   assert.deepEqual(snap.cursor, { row: 6, col: 53 });
+  assert.equal(snap.host, '5250');
+  assert.equal(snap.messageRow, 24);
   assert.deepEqual(snap.fields.map((f) => [f.id, f.length, f.attr.nonDisplay]), [
     ['6:53', 10, false], ['7:53', 10, true],
   ]);

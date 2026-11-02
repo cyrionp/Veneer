@@ -1,0 +1,20 @@
+{
+  "name": "@veneer/terminal",
+  "version": "0.1.0",
+  "description": "The host-neutral terminal model Veneer works with: screens, fields, keys and the session interface",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "veneer-source": "./src/index.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "test": "node --test test/*.test.ts"
+  }
+}

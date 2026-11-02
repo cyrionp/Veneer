@@ -9,7 +9,7 @@
 // works: corners and a repeated fill on the top and bottom rows, and the same
 // character down each side. A border of blanks in reverse image counts too.
 
-import type { ScreenSnapshot } from '@veneer/tn5250';
+import type { ScreenSnapshot } from '@veneer/terminal';
 
 /** A rectangle of the screen, 1-based and inclusive. */
 export interface Region {

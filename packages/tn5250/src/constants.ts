@@ -1,6 +1,8 @@
 // 5250 and Telnet protocol constants (RFC 854, 1205, 2877, 4777 and the
 // IBM 5250 Functions Reference).
 
+import type { AidName } from '@veneer/terminal';
+
 export const Telnet = {
   IAC: 0xff,
   DONT: 0xfe,
@@ -105,10 +107,6 @@ export const Aid = {
   CLEAR: 0xbd,
   INBOUND_WSF: 0x88,
 } as const;
-
-export type AidName =
-  | 'Enter' | 'Help' | 'PageUp' | 'PageDown' | 'Print' | 'Clear' | 'RecordBackspace'
-  | `F${1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21 | 22 | 23 | 24}`;
 
 export function aidByte(name: AidName): number {
   switch (name) {

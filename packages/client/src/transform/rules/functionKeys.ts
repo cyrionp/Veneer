@@ -1,6 +1,6 @@
 // "F3=Exit   F5=Refresh   F12=Cancel" rows near the bottom -> a button bar.
 
-import type { AidName } from '@veneer/tn5250';
+import type { AidName } from '@veneer/terminal';
 import type { TransformContext } from '../context.ts';
 import { legendTokens, rowLine } from '../text.ts';
 

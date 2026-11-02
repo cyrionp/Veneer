@@ -1,4 +1,4 @@
-import type { AidName, ScreenSnapshot } from '@veneer/tn5250';
+import type { AidName, ScreenSnapshot } from '@veneer/terminal';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { fillUrl, matchScreen, screenId, type ScreenDefinition, type Target } from '@veneer/screens';
 import { download, fileBase } from '../export/download.ts';

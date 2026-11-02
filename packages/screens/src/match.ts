@@ -2,7 +2,7 @@
 // its ids (if it lists any) and all its text appears at the stated positions.
 // With several matches, the most specific one wins.
 
-import type { ScreenSnapshot } from '@veneer/tn5250';
+import type { ScreenSnapshot } from '@veneer/terminal';
 import { screenId } from './fingerprint.ts';
 import type { ScreenDefinition, TextMatch } from './types.ts';
 

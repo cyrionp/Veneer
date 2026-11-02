@@ -1,6 +1,6 @@
 // The untransformed 5250 screen, for comparison and as a fallback.
 
-import type { ScreenSnapshot } from '@veneer/tn5250';
+import type { ScreenSnapshot } from '@veneer/terminal';
 import type { CSSProperties } from 'react';
 import { FieldInput, type FieldBinding } from './fieldInput.tsx';
 

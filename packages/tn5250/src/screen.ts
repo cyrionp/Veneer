@@ -1,6 +1,10 @@
 // The 5250 display: a character buffer plus the format table (input fields).
 // Field data lives in the buffer itself, as on a real 5250 terminal.
 
+import {
+  fieldId,
+  type Color, type DisplayAttribute, type FieldAdjustName, type FieldShiftName, type FieldSnapshot, type ScreenSnapshot, type Segment,
+} from '@veneer/terminal';
 import type { Codepage } from './ebcdic.ts';
 
 export interface Field {
@@ -18,11 +22,9 @@ export interface Field {
 export const FieldShift = {
   0: 'alpha', 1: 'alphaOnly', 2: 'numericShift', 3: 'numericOnly',
   4: 'katakana', 5: 'digitsOnly', 6: 'io', 7: 'signedNumeric',
-} as const;
-export type FieldShiftName = (typeof FieldShift)[keyof typeof FieldShift];
+} as const satisfies Record<number, FieldShiftName>;
 
-export const FieldAdjust = { 0: 'none', 5: 'zeroFill', 6: 'blankFill', 7: 'mandatoryFill' } as const;
-export type FieldAdjustName = (typeof FieldAdjust)[keyof typeof FieldAdjust] | 'none';
+export const FieldAdjust = { 0: 'none', 5: 'zeroFill', 6: 'blankFill', 7: 'mandatoryFill' } as const satisfies Record<number, FieldAdjustName>;
 
 export const FFW = {
   BYPASS: 0x2000,
@@ -40,17 +42,6 @@ export function fieldShift(f: Field): FieldShiftName {
 
 export function fieldAdjust(f: Field): FieldAdjustName {
   return FieldAdjust[(f.ffw & 0x07) as keyof typeof FieldAdjust] ?? 'none';
-}
-
-export type Color = 'green' | 'white' | 'red' | 'turquoise' | 'yellow' | 'pink' | 'blue';
-
-export interface DisplayAttribute {
-  color: Color;
-  reverse: boolean;
-  underline: boolean;
-  blink: boolean;
-  columnSeparator: boolean;
-  nonDisplay: boolean;
 }
 
 /** Decode a 5250 color-display attribute byte (0x20-0x3F). */
@@ -146,49 +137,6 @@ export class Screen {
   }
 }
 
-export interface Segment {
-  /** 1-based starting column. */
-  col: number;
-  text: string;
-  attr: DisplayAttribute;
-}
-
-export interface FieldSnapshot {
-  /** Stable id: "row:col" of the first data position (1-based). */
-  id: string;
-  row: number;
-  col: number;
-  length: number;
-  value: string;
-  bypass: boolean;
-  modified: boolean;
-  monocase: boolean;
-  mandatoryEnter: boolean;
-  /** Submit Enter automatically when the field is filled. */
-  autoEnter: boolean;
-  shift: FieldShiftName;
-  adjust: FieldAdjustName;
-  attr: DisplayAttribute;
-}
-
-export interface ScreenSnapshot {
-  rows: number;
-  cols: number;
-  cursor: { row: number; col: number };
-  keyboardLocked: boolean;
-  messageWaiting: boolean;
-  /** Text of the error line while the keyboard is in error state. */
-  error: string | null;
-  /** 1-based row where the host writes messages (normally the last row). */
-  messageRow: number;
-  /** Plain text of each row, with non-display data blanked. */
-  lines: string[];
-  segments: Segment[][];
-  fields: FieldSnapshot[];
-}
-
-export const fieldId = (row: number, col: number): string => `${row}:${col}`;
-
 export function snapshot(screen: Screen, cp: Codepage): ScreenSnapshot {
   const lines: string[] = [];
   const segments: Segment[][] = [];
@@ -243,6 +191,7 @@ export function snapshot(screen: Screen, cp: Codepage): ScreenSnapshot {
   const error = screen.error ? lines[screen.error.row - 1]!.trim() : null;
 
   return {
+    host: '5250',
     rows: screen.rows,
     cols: screen.cols,
     cursor: screen.rowCol(screen.cursor),

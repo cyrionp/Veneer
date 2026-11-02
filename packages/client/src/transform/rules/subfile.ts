@@ -3,7 +3,7 @@
 // legend ("2=Change  4=Delete") above the headings becomes a dropdown in the
 // option column.
 
-import type { FieldSnapshot } from '@veneer/tn5250';
+import type { FieldSnapshot } from '@veneer/terminal';
 import { roleOf, type Chunk, type TransformContext } from '../context.ts';
 import { legendTokens, rowLine } from '../text.ts';
 import type { Option, TableCell, TableColumn, TableRow } from '../types.ts';

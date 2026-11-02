@@ -6,5 +6,5 @@
     "composite": true
   },
   "include": ["src"],
-  "references": [{ "path": "../tn5250" }]
+  "references": [{ "path": "../terminal" }]
 }

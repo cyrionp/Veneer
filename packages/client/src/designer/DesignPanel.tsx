@@ -6,7 +6,7 @@ import {
   type ActiveTheme, type SiteCustomization, type SiteEvent,
   type Target,
 } from '@veneer/screens';
-import type { AidName, ScreenSnapshot } from '@veneer/tn5250';
+import type { AidName, ScreenSnapshot } from '@veneer/terminal';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { runScript } from '../custom/runtime.ts';
 import { ThemesTab } from './ThemesTab.tsx';

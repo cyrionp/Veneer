@@ -2,7 +2,7 @@
 // automatic reconnects after network drops.
 
 import type { ClientMessage, ServerMessage } from '@veneer/server';
-import type { ScreenSnapshot } from '@veneer/tn5250';
+import type { ScreenSnapshot } from '@veneer/terminal';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 export type ConnectionState = 'connecting' | 'connected' | 'closed';

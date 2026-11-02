@@ -22,6 +22,7 @@ install.
 
 | Package | Status | Purpose |
 | --- | --- | --- |
+| `packages/terminal` | 3270 stage 1 | The host-neutral model the other packages use: screens, fields, keys and the session interface |
 | `packages/tn5250` | Milestone 1 | Pure TypeScript TN5250 client: Telnet/TLS, 5250 data stream, screen model |
 | `packages/server` | Milestone 2 | Session server: one host session per browser tab over WebSocket |
 | `packages/client` | Milestone 3 | Browser client: React UI with auto-transform rules and the designer |

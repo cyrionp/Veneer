@@ -5,10 +5,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import readline from 'node:readline/promises';
+import type { AidName, ScreenSnapshot } from '@veneer/terminal';
 import { hostSettingsFromEnv } from './config.ts';
 import { Session } from './session.ts';
-import type { AidName } from './constants.ts';
-import type { ScreenSnapshot } from './screen.ts';
 
 const env = process.env;
 let settings;

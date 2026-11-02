@@ -3,7 +3,7 @@
 // list by its headings. Used where the designer would otherwise say "field 6:22".
 
 import type { Target } from '@veneer/screens';
-import type { ScreenSnapshot } from '@veneer/tn5250';
+import type { ScreenSnapshot } from '@veneer/terminal';
 import { homeOf, itemAt } from '../transform/customize.ts';
 import { stripLeaders } from '../transform/text.ts';
 import type { FieldItem, Item, ScreenView, TableItem } from '../transform/types.ts';

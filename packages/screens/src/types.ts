@@ -1,7 +1,7 @@
 // Screen definitions: how to recognise a screen, and what to change on it.
 // Stored as one JSON file per screen, so they can be reviewed in git.
 
-import type { AidName } from '@veneer/tn5250';
+import type { AidName } from '@veneer/terminal';
 
 /** Semantic color roles (CUA conventions mapped from 5250 colors). */
 export const ROLES = ['normal', 'emphasis', 'muted', 'danger', 'warning', 'accent', 'accent2'] as const;

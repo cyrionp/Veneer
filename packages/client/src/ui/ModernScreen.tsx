@@ -3,7 +3,7 @@
 
 import type { Target } from '@veneer/screens';
 import type { CSSProperties, MouseEvent, PointerEvent, RefObject, WheelEvent } from 'react';
-import type { ScreenSnapshot } from '@veneer/tn5250';
+import type { ScreenSnapshot } from '@veneer/terminal';
 import { useEffect, useRef, useState } from 'react';
 import { homeOf } from '../transform/customize.ts';
 import type { Action, Card, Item, ScreenView, TableItem, WindowView } from '../transform/types.ts';

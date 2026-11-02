@@ -1,11 +1,11 @@
 // Strict validation of screen definitions from files or the designer API.
 
+import { isAidName } from '@veneer/terminal';
 import { isWebTemplate, placeholders } from './links.ts';
 import { STYLE_TESTS } from './styles.ts';
 import { CORNERS, DATE_FORMATS, MAX_TEXTAREA_FIELDS, RADIO_LAYOUTS, DENSITIES, FONTS, LOOKS, ROLES, SCREEN_EVENTS, SITE_EVENTS, STYLE_TARGETS, type Change, type ComponentOptions, type StyleCondition, type KeyAction, type ScreenEvent, type SiteCustomization, type SiteStyle, type ScreenDefinition, type TabBand, type Target, type TextMatch, type Widget } from './types.ts';
 
 export const ID_PATTERN = /^[a-z0-9][a-z0-9-]{0,63}$/;
-const AID = /^(Enter|Help|PageUp|PageDown|Print|Clear|RecordBackspace|F([1-9]|1\d|2[0-4]))$/;
 const FIELD_ID = /^\d{1,3}:\d{1,3}$/;
 const SCREEN_ID = /^[0-9a-f]{8,32}$/;
 const MAX_CHANGES = 500;
@@ -166,7 +166,7 @@ function change(v: unknown, path: string): Change {
       const label = str(o.label, `${path}.label`, 60);
       if (a.url !== undefined) return { op: 'button', label, action: { url: urlTemplate(a.url, `${path}.action.url`) } };
       const aid = str(a.aid, `${path}.action.aid`, 20);
-      if (!AID.test(aid)) fail(`${path}.action.aid`, 'must be an AID key such as Enter or F3');
+      if (!isAidName(aid)) fail(`${path}.action.aid`, 'must be an AID key such as Enter or F3');
       const action: KeyAction = { aid: aid as never };
       if (a.fields !== undefined) {
         const f = obj(a.fields, `${path}.action.fields`);

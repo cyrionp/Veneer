@@ -1,6 +1,6 @@
 // Keyboard -> 5250 AID keys. Shift+F1..F12 gives F13..F24.
 
-import type { AidName } from '@veneer/tn5250';
+import type { AidName } from '@veneer/terminal';
 import type { TypedKey } from './typeahead.ts';
 
 export type KeyAction = AidName | 'Reset';

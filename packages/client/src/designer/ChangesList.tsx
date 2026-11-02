@@ -3,7 +3,7 @@
 // (Undo brings it back).
 
 import type { ScreenDefinition, Target } from '@veneer/screens';
-import type { ScreenSnapshot } from '@veneer/tn5250';
+import type { ScreenSnapshot } from '@veneer/terminal';
 import type { ScreenView } from '../transform/types.ts';
 import { describeChange } from './changes.ts';
 import { Section } from './Section.tsx';

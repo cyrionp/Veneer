@@ -1,6 +1,6 @@
 // " 1. User tasks" menu lines -> links that type the number and press Enter.
 
-import type { FieldSnapshot } from '@veneer/tn5250';
+import type { FieldSnapshot } from '@veneer/terminal';
 import type { Chunk, TransformContext } from '../context.ts';
 
 const ITEM = /^(\d{1,2})\.\s+(\S.*)$/;

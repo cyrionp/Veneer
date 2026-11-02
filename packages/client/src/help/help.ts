@@ -4,7 +4,7 @@
 // help on the host. Like the list exporter, the reader only decides the next
 // key; the app sends it and reports each new screen.
 
-import type { AidName } from '@veneer/tn5250';
+import type { AidName } from '@veneer/terminal';
 import type { ScreenView } from '../transform/types.ts';
 
 export interface HelpPage {

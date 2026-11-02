@@ -1,7 +1,7 @@
 // Pure helpers the designer uses to build and edit screen definitions.
 
 import { MAX_TEXTAREA_FIELDS, screenId, type ButtonAction, type Change, type Role, type ScreenDefinition, type ScreenEvent, type TabBand, type Target, type TextMatch, type Widget } from '@veneer/screens';
-import type { FieldSnapshot, ScreenSnapshot } from '@veneer/tn5250';
+import type { FieldSnapshot, ScreenSnapshot } from '@veneer/terminal';
 import { heightOf, homeOf, isBox, itemAt } from '../transform/customize.ts';
 import type { Item, ScreenView } from '../transform/types.ts';
 

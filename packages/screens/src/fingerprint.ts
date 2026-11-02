@@ -2,7 +2,7 @@
 // the screen size, the input-field layout (from the DDS record format) and
 // the title. Data, messages and the system name are left out.
 
-import type { FieldSnapshot, ScreenSnapshot } from '@veneer/tn5250';
+import type { FieldSnapshot, ScreenSnapshot } from '@veneer/terminal';
 import { activeWindow, findWindows, type Region } from './windows.ts';
 
 export interface Fingerprint {

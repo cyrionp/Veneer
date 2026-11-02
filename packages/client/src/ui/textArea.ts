@@ -5,7 +5,7 @@
 // line. An edit that would push text past the last field is refused, so
 // nothing typed is ever lost.
 
-import type { FieldSnapshot } from '@veneer/tn5250';
+import type { FieldSnapshot } from '@veneer/terminal';
 import { acceptsChar } from './fieldRules.ts';
 
 /** What the box needs of each field. */

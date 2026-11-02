@@ -3,7 +3,7 @@
 // else the text there, up to the next double space. {6:22:10} takes exactly
 // 10 characters. Values are trimmed and URL-encoded.
 
-import type { ScreenSnapshot } from '@veneer/tn5250';
+import type { ScreenSnapshot } from '@veneer/terminal';
 
 const PLACEHOLDER = /\{(\d{1,3}):(\d{1,3})(?::(\d{1,3}))?\}/g;
 

@@ -1,11 +1,8 @@
 export { hostSettingsFromEnv, type HostSettings } from './config.ts';
-export { DeviceNameInUseError, Session, type SessionOptions, type SubmitInput } from './session.ts';
+export { Session, type SessionOptions } from './session.ts';
 export { Terminal, ProtocolError, buildRecord, type TerminalOptions } from './terminal.ts';
 export { TelnetCodec, type TelnetOptions } from './telnet.ts';
-export {
-  Screen, snapshot, decodeAttribute, fieldId,
-  type Field, type FieldSnapshot, type ScreenSnapshot, type Segment, type DisplayAttribute, type Color,
-} from './screen.ts';
+export { Screen, snapshot, decodeAttribute, type Field } from './screen.ts';
 export { Codepage, getCodepage, registerCodepage } from './ebcdic.ts';
-export { aidByte, type AidName } from './constants.ts';
+export { aidByte } from './constants.ts';
 export { HostStream, Attr, type FieldOptions } from './hostStream.ts';

@@ -21,9 +21,10 @@
     "demo": "node --conditions=veneer-source dev/demo.ts"
   },
   "dependencies": {
+    "@veneer/screens": "^0.1.0",
+    "@veneer/terminal": "^0.1.0",
     "@veneer/tn5250": "^0.1.0",
-    "ws": "^8.18.0",
-    "@veneer/screens": "^0.1.0"
+    "ws": "^8.18.0"
   },
   "devDependencies": {
     "@types/ws": "^8.5.13"

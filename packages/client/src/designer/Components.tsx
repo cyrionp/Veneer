@@ -3,7 +3,7 @@
 // set their options; they cannot add or change component code.
 
 import type { ComponentOptions, ScreenDefinition, Target } from '@veneer/screens';
-import type { ScreenSnapshot } from '@veneer/tn5250';
+import type { ScreenSnapshot } from '@veneer/terminal';
 import { useEffect, useState } from 'react';
 import { componentAt, componentsOf, freeSpot, setComponent } from './edit.ts';
 import { CodeBox } from './CodeBox.tsx';

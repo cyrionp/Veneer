@@ -5,7 +5,7 @@
 import assert from 'node:assert/strict';
 import { describe, test } from 'node:test';
 import { validateDefinition, type ScreenDefinition, type Widget } from '@veneer/screens';
-import type { FieldSnapshot } from '@veneer/tn5250';
+import type { FieldSnapshot } from '@veneer/terminal';
 import { describeChange } from '../src/designer/changes.ts';
 import { fieldsBelow, resolveSelection, setWidget, textAreaOf, toggleTextAreaField } from '../src/designer/edit.ts';
 import { customize } from '../src/transform/customize.ts';

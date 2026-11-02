@@ -18,6 +18,9 @@
     "test": "node --conditions=veneer-source --test test/*.test.ts"
   },
   "dependencies": {
+    "@veneer/terminal": "^0.1.0"
+  },
+  "devDependencies": {
     "@veneer/tn5250": "^0.1.0"
   }
 }

@@ -15,5 +15,5 @@
     "types": ["node"]
   },
   "include": ["src", "test"],
-  "references": [{ "path": "../tn5250" }, { "path": "../server" }, { "path": "../screens" }]
+  "references": [{ "path": "../terminal" }, { "path": "../tn5250" }, { "path": "../server" }, { "path": "../screens" }]
 }

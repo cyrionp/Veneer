@@ -1,7 +1,7 @@
 // 5250 field rules applied in the browser: allowed characters, the
 // Field+/Field- keys, and the mandatory checks a terminal makes before Enter.
 
-import type { FieldSnapshot } from '@veneer/tn5250';
+import type { FieldSnapshot } from '@veneer/terminal';
 
 const NUMERIC_CHARS = /^[0-9 ,.+-]$/;
 /**
