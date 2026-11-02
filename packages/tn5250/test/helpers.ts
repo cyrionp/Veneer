@@ -1,4 +1,4 @@
-import { getCodepage } from '../src/ebcdic.ts';
+import { getCodepage } from '@veneer/terminal';
 import { Terminal, buildRecord } from '../src/terminal.ts';
 
 export const cp = getCodepage(37);

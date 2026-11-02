@@ -2,7 +2,7 @@
 // host to create realistic screens without an IBM i.
 
 import { Command, ESC, Order } from './constants.ts';
-import { getCodepage, type Codepage } from './ebcdic.ts';
+import { getCodepage, type Codepage } from '@veneer/terminal';
 
 export const Attr = {
   GREEN: 0x20, GREEN_REVERSE: 0x21, WHITE: 0x22, GREEN_UNDERLINE: 0x24,

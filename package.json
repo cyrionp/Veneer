@@ -11,8 +11,8 @@
     "node": ">=20.12"
   },
   "scripts": {
-    "build": "tsc -b packages/server && npm run build -w @veneer/client",
-    "typecheck": "tsc -b packages/server && tsc -p packages/client --noEmit",
+    "build": "tsc -b packages/server packages/tn3270 && npm run build -w @veneer/client",
+    "typecheck": "tsc -b packages/server packages/tn3270 && tsc -p packages/client --noEmit",
     "test": "npm test --workspaces --if-present",
     "dev": "npm run dev -w @veneer/server",
     "start": "npm start -w @veneer/server",

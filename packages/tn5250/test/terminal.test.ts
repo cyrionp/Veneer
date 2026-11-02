@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { aidByte } from '../src/constants.ts';
 import { snapshot } from '../src/screen.ts';
 import { CLEAR, UNLOCK, cp, e, ic, makeTerminal, readMdt, sba, sf, wtd } from './helpers.ts';
 
@@ -194,4 +195,8 @@ test('Clear Unit Alternate switches to 27x132 and addresses rows past 24', () =>
   assert.equal(snap.lines[26]!.trim(), 'Bottom right');
   assert.equal(snap.fields[0]!.id, '26:3');
   assert.equal(snap.fields[0]!.length, 100);
+});
+
+test('3270-only keys are refused', () => {
+  for (const k of ['PA1', 'PA2', 'PA3'] as const) assert.throws(() => aidByte(k), /Unknown AID/);
 });

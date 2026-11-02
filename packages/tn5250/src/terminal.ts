@@ -5,7 +5,7 @@ import { fieldId } from '@veneer/terminal';
 import {
   AIDS_WITHOUT_DATA, Aid, Command, ESC, HeaderFlag, Opcode, Order, RECORD_TYPE_DISPLAY,
 } from './constants.ts';
-import type { Codepage } from './ebcdic.ts';
+import type { Codepage } from '@veneer/terminal';
 import { FFW, Screen, fieldAdjust, fieldShift, isAttributeByte, type Field } from './screen.ts';
 
 export interface TerminalOptions {

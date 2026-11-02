@@ -5,7 +5,7 @@ import {
   fieldId,
   type Color, type DisplayAttribute, type FieldAdjustName, type FieldShiftName, type FieldSnapshot, type ScreenSnapshot, type Segment,
 } from '@veneer/terminal';
-import type { Codepage } from './ebcdic.ts';
+import type { Codepage } from '@veneer/terminal';
 
 export interface Field {
   /** Buffer address of the first data position; the attribute is at start - 1. */

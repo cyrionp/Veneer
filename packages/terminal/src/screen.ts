@@ -50,6 +50,8 @@ export interface FieldSnapshot {
 
   /** What the field accepts (5250). */
   shift?: FieldShiftName;
+  /** The field takes numbers only (3270 numeric attribute: digits, sign and decimal point). */
+  numeric?: boolean;
   /** How the field is filled on exit, or mandatory fill (5250). */
   adjust?: FieldAdjustName;
   /** Typed letters become upper case (5250). */

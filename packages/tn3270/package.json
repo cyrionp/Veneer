@@ -1,0 +1,23 @@
+{
+  "name": "@veneer/tn3270",
+  "version": "0.1.0",
+  "description": "Pure TypeScript TN3270/TN3270E client and 3270 screen model",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "veneer-source": "./src/index.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "test": "node --conditions=veneer-source --test test/*.test.ts"
+  },
+  "dependencies": {
+    "@veneer/terminal": "^0.1.0"
+  }
+}

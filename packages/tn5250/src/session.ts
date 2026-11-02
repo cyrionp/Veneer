@@ -9,7 +9,7 @@ import {
   type ConnectionSettings, type ScreenSnapshot, type SubmitInput, type TerminalSession, type TerminalSessionEvents,
 } from '@veneer/terminal';
 import { aidByte } from './constants.ts';
-import { getCodepage, type Codepage } from './ebcdic.ts';
+import { getCodepage, type Codepage } from '@veneer/terminal';
 import { snapshot } from './screen.ts';
 import { TelnetCodec } from './telnet.ts';
 import { ProtocolError, Terminal } from './terminal.ts';
@@ -125,6 +125,8 @@ export class Session extends EventEmitter<TerminalSessionEvents> implements Term
 
   /** Fill fields and press an AID key. */
   submit(input: SubmitInput): void {
+    // Check the key first, so a key the 5250 doesn't have changes nothing.
+    const aid = aidByte(input.aid);
     const screen = this.terminal.screen;
     if (screen.error) this.terminal.reset();
     if (screen.keyboardLocked || !this.terminal.readPending) throw new ProtocolError('Keyboard is locked');
@@ -137,7 +139,7 @@ export class Session extends EventEmitter<TerminalSessionEvents> implements Term
       this.terminal.setFieldValue(field, value);
     }
     if (input.cursor) screen.cursor = screen.address(input.cursor.row, input.cursor.col);
-    this.terminal.sendAid(aidByte(input.aid));
+    this.terminal.sendAid(aid);
   }
 
   systemRequest(): void { this.terminal.sendSystemRequest(); }

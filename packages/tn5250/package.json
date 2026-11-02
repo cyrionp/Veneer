@@ -15,7 +15,7 @@
   },
   "scripts": {
     "build": "tsc -b",
-    "test": "node --test test/*.test.ts",
+    "test": "node --conditions=veneer-source --test test/*.test.ts",
     "cli": "node --conditions=veneer-source --env-file-if-exists=../../.env src/cli.ts"
   },
   "dependencies": {
