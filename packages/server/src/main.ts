@@ -7,6 +7,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadConfig, type ServerConfig } from './config.ts';
+import { defaultPort, hostTypeOf } from './host.ts';
 import { configureLog, log } from './log.ts';
 import { createServer } from './server.ts';
 import { VERSION } from './version.ts';
@@ -44,7 +45,8 @@ log.info('veneer listening', {
   version: VERSION,
   node: process.version,
   url: `${config.https ? 'https' : 'http'}://${addr.address}:${addr.port}`,
-  ibmi: `${config.host.host}:${config.host.port ?? (config.host.tls ? 992 : 23)}`,
+  host: `${config.host.host}:${defaultPort(config.host)}`,
+  hostType: hostTypeOf(config.host),
   tls: Boolean(config.host.tls),
   screens: config.screensDir,
   designer: [config.designerLocal && 'local', config.designerToken && 'token'].filter(Boolean).join('+') || 'off',

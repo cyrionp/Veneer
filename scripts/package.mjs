@@ -48,7 +48,7 @@ copy('.env.example', 'veneer.env.example');
 copy('packages/server/dev/components', 'examples/components');
 // The built-in themes, which the server finds beside its dist/ folder.
 copy('packages/server/themes');
-for (const pkg of ['terminal', 'tn5250', 'screens', 'server', 'client']) {
+for (const pkg of ['terminal', 'tn5250', 'tn3270', 'screens', 'server', 'client']) {
   copy(`packages/${pkg}/package.json`);
   copy(`packages/${pkg}/dist`);
 }

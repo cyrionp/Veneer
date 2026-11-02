@@ -6,6 +6,7 @@ import type { AddressInfo } from 'node:net';
 import path from 'node:path';
 import { WebSocketServer, type WebSocket } from 'ws';
 import { handleApi } from './api.ts';
+import { defaultPort, hostTypeOf } from './host.ts';
 import type { ServerConfig } from './config.ts';
 import { ScreenInventory } from './inventory.ts';
 import { log } from './log.ts';
@@ -53,7 +54,7 @@ export function createServer(config: ServerConfig): VeneerServer {
     node: process.version,
     startedAt: new Date(Date.now() - process.uptime() * 1000).toISOString(),
     uptimeSeconds: Math.round(process.uptime()),
-    ibmi: { host: config.host.host, port: config.host.port ?? (config.host.tls ? 992 : 23), tls: Boolean(config.host.tls) },
+    ibmi: { type: hostTypeOf(config.host), host: config.host.host, port: defaultPort(config.host), tls: Boolean(config.host.tls) },
     https: Boolean(config.https),
     maxSessions: config.maxSessions,
     deviceNamePrefix: config.deviceNamePrefix ?? null,

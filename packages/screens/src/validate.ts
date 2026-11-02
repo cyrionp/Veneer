@@ -1,11 +1,13 @@
 // Strict validation of screen definitions from files or the designer API.
 
-import { isAidName } from '@veneer/terminal';
+import { hostHasAid, isAidName, type AidName, type HostType } from '@veneer/terminal';
 import { isWebTemplate, placeholders } from './links.ts';
 import { STYLE_TESTS } from './styles.ts';
 import { CORNERS, DATE_FORMATS, MAX_TEXTAREA_FIELDS, RADIO_LAYOUTS, DENSITIES, FONTS, LOOKS, ROLES, SCREEN_EVENTS, SITE_EVENTS, STYLE_TARGETS, type Change, type ComponentOptions, type StyleCondition, type KeyAction, type ScreenEvent, type SiteCustomization, type SiteStyle, type ScreenDefinition, type TabBand, type Target, type TextMatch, type Widget } from './types.ts';
 
 export const ID_PATTERN = /^[a-z0-9][a-z0-9-]{0,63}$/;
+/** The most rows a screen has: 27 on a 5250, 43 on a 3278 model 4. */
+const MAX_ROWS = 43;
 const FIELD_ID = /^\d{1,3}:\d{1,3}$/;
 const SCREEN_ID = /^[0-9a-f]{8,32}$/;
 const MAX_CHANGES = 500;
@@ -61,7 +63,7 @@ function urlTemplate(v: unknown, path: string): string {
   const url = str(v, path, 2000);
   if (!isWebTemplate(url)) fail(path, 'must start with http:// or https:// and a host name (no placeholders in the host)');
   for (const p of placeholders(url)) {
-    if (p.row < 1 || p.row > 27 || p.col < 1 || p.col > 132 || p.length === 0) fail(path, `{${p.row}:${p.col}} is not a screen position`);
+    if (p.row < 1 || p.row > MAX_ROWS || p.col < 1 || p.col > 132 || p.length === 0) fail(path, `{${p.row}:${p.col}} is not a screen position`);
   }
   return url;
 }
@@ -83,7 +85,7 @@ function oneOf<T extends string>(v: unknown, allowed: readonly T[], path: string
 
 function target(v: unknown, path: string): Target {
   const o = obj(v, path);
-  return { row: int(o.row, `${path}.row`, 1, 27), col: int(o.col, `${path}.col`, 1, 132) };
+  return { row: int(o.row, `${path}.row`, 1, MAX_ROWS), col: int(o.col, `${path}.col`, 1, 132) };
 }
 
 function textMatch(v: unknown, path: string): TextMatch {
@@ -199,8 +201,8 @@ function change(v: unknown, path: string): Change {
         const t = obj(x, `${path}.tabs[${i}]`);
         const title = str(t.title, `${path}.tabs[${i}].title`, 40);
         if (title.trim() === '') fail(`${path}.tabs[${i}].title`, 'must not be blank');
-        const from = int(t.from, `${path}.tabs[${i}].from`, 1, 27);
-        const to = int(t.to, `${path}.tabs[${i}].to`, from, 27);
+        const from = int(t.from, `${path}.tabs[${i}].from`, 1, MAX_ROWS);
+        const to = int(t.to, `${path}.tabs[${i}].to`, from, MAX_ROWS);
         return { title, from, to };
       });
       if (tabs.length < 2) fail(`${path}.tabs`, 'needs at least two tabs');
@@ -227,7 +229,7 @@ function change(v: unknown, path: string): Change {
         op: 'component', name,
         at: target(o.at, `${path}.at`),
         width: int(o.width, `${path}.width`, 1, 132),
-        height: int(o.height, `${path}.height`, 1, 27),
+        height: int(o.height, `${path}.height`, 1, MAX_ROWS),
         ...(field !== undefined ? { field } : {}),
         ...(options !== undefined ? { options } : {}),
       };
@@ -238,7 +240,7 @@ function change(v: unknown, path: string): Change {
         at: target(o.at, `${path}.at`),
         html: str(o.html, `${path}.html`, MAX_HTML),
         width: int(o.width, `${path}.width`, 1, 132),
-        height: int(o.height, `${path}.height`, 1, 27),
+        height: int(o.height, `${path}.height`, 1, MAX_ROWS),
         ...(o.css !== undefined && o.css !== '' ? { css: str(o.css, `${path}.css`, MAX_CSS) } : {}),
         ...(o.script !== undefined && o.script !== '' ? { script: str(o.script, `${path}.script`, MAX_SCRIPT) } : {}),
       };
@@ -276,12 +278,32 @@ function checkLayout(changes: Change[]): void {
 }
 
 /** Validate untrusted input; returns a clean definition (unknown keys dropped). */
+/** Every key a definition's changes press must exist on its host type. */
+function checkKeys(changes: Change[], host: HostType): void {
+  const visit = (v: unknown, path: string): void => {
+    if (Array.isArray(v)) return v.forEach((x, i) => visit(x, `${path}[${i}]`));
+    if (typeof v !== 'object' || v === null) return;
+    for (const [k, x] of Object.entries(v)) {
+      if (k === 'aid' && typeof x === 'string' && !hostHasAid(host, x as AidName)) {
+        fail(`${path}.aid`, `${x} is not a ${host} key`);
+      }
+      visit(x, `${path}.${k}`);
+    }
+  };
+  visit(changes, 'changes');
+}
+
 export function validateDefinition(input: unknown): ScreenDefinition {
   const o = obj(input, 'definition');
   const id = str(o.id, 'id', 64);
   if (!ID_PATTERN.test(id)) fail('id', 'must be lowercase letters, digits and dashes');
   const name = str(o.name, 'name', 100);
   if (name.trim() === '') fail('name', 'must not be blank');
+  let host: HostType | undefined;
+  if (o.host !== undefined) {
+    if (o.host !== '5250' && o.host !== '3270') fail('host', 'must be "5250" or "3270"');
+    host = o.host;
+  }
   const m = obj(o.match, 'match');
   const text = arr(m.text ?? [], 'match.text', 20).map((x, i) => textMatch(x, `match.text[${i}]`));
   const screenIds = arr(m.screenIds ?? [], 'match.screenIds', 20).map((x, i) => {
@@ -293,15 +315,17 @@ export function validateDefinition(input: unknown): ScreenDefinition {
   const def: ScreenDefinition = {
     id,
     name,
+    ...(host ? { host } : {}),
     match: {
       ...(screenIds.length > 0 ? { screenIds } : {}),
-      ...(m.rows !== undefined ? { rows: int(m.rows, 'match.rows', 24, 27) } : {}),
+      ...(m.rows !== undefined ? { rows: int(m.rows, 'match.rows', 24, MAX_ROWS) } : {}),
       ...(m.cols !== undefined ? { cols: int(m.cols, 'match.cols', 80, 132) } : {}),
       text,
     },
     changes: arr(o.changes ?? [], 'changes', MAX_CHANGES).map((x, i) => change(x, `changes[${i}]`)),
   };
   checkLayout(def.changes);
+  if (host) checkKeys(def.changes, host);
   if (o.title !== undefined) def.title = str(o.title, 'title', 100);
   if (o.css !== undefined && o.css !== '') def.css = str(o.css, 'css', MAX_CSS);
   const scripts: Partial<Record<ScreenEvent, string>> = {};

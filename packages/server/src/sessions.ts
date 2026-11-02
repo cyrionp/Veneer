@@ -1,12 +1,12 @@
-// Browser sessions: each WebSocket owns one host session. A socket
+// Browser sessions: each WebSocket owns one host session (5250 or 3270). A socket
 // that drops (e.g. a page reload) leaves the host session running for a grace
 // period, during which a new socket can reattach with the resume token.
 
 import { randomBytes, randomUUID } from 'node:crypto';
 import { DeviceNameInUseError, type ScreenSnapshot, type TerminalSession } from '@veneer/terminal';
-import { Session, type HostSettings } from '@veneer/tn5250';
 import WebSocket from 'ws';
 import { DeviceNamePool } from './devices.ts';
+import { createHostSession, deviceNameLength, hostLabel, hostTypeOf, type HostSettings } from './host.ts';
 import type { ScreenInventory } from './inventory.ts';
 import { log } from './log.ts';
 import { CloseCode, parseClientMessage, type ClientMessage, type ServerMessage } from './protocol.ts';
@@ -17,9 +17,9 @@ export interface SessionManagerOptions {
   idleTimeoutMs: number;
   resumeGraceMs: number;
   maxSessions: number;
-  /** Name devices PREFIX01, PREFIX02, ...; unset lets IBM i assign names. */
+  /** Name devices (or LUs) PREFIX01, PREFIX02, ...; unset lets the host assign names. */
   deviceNamePrefix?: string | undefined;
-  /** Log every 5250 record; see traceRecord. */
+  /** Log every host record; see traceRecord. */
   trace?: boolean;
   /** How long a new socket has to send its hello message. */
   helloTimeoutMs?: number;
@@ -88,7 +88,7 @@ export class SessionManager {
 
   constructor(opts: SessionManagerOptions) {
     this.opts = opts;
-    this.devices = opts.deviceNamePrefix ? new DeviceNamePool(opts.deviceNamePrefix) : undefined;
+    this.devices = opts.deviceNamePrefix ? new DeviceNamePool(opts.deviceNamePrefix, deviceNameLength(hostTypeOf(opts.host))) : undefined;
     this.idleSweep = setInterval(() => this.sweepIdle(), Math.min(30_000, Math.max(1000, opts.idleTimeoutMs / 4)));
     this.idleSweep.unref();
   }
@@ -130,8 +130,7 @@ export class SessionManager {
       return;
     }
     let retries = 0;
-    const host: TerminalSession = new Session({
-      ...this.opts.host,
+    const host: TerminalSession = createHostSession(this.opts.host, {
       ...(this.opts.trace ? { trace: (dir: 'in' | 'out', rec: Buffer) => traceRecord(bs, dir, rec) } : {}),
       ...(deviceName ? { deviceName, onDeviceNameInUse: (name: string) => this.nextDeviceName(bs, name, ++retries) } : {}),
     });
@@ -146,7 +145,7 @@ export class SessionManager {
     host.on('warning', (message) => log.warn('protocol warning', { session: bs.id, message }));
     host.on('close', (err) => {
       if (err instanceof DeviceNameInUseError) {
-        bs.send({ type: 'error', message: 'All device names tried are in use on the IBM i; try again later' });
+        bs.send({ type: 'error', message: `All device names tried are in use on ${hostLabel(hostTypeOf(this.opts.host))}; try again later` });
         return this.destroy(bs, CloseCode.HOST_CLOSED, 'No free device name');
       }
       if (err) log.warn('host connection error', { session: bs.id, error: err.message });
@@ -162,7 +161,7 @@ export class SessionManager {
       },
       (err: Error) => {
         log.warn('host connect failed', { session: bs.id, error: err.message });
-        bs.send({ type: 'error', message: `Could not connect to the IBM i: ${err.message}` });
+        bs.send({ type: 'error', message: `Could not connect to ${hostLabel(hostTypeOf(this.opts.host))}: ${err.message}` });
         this.destroy(bs, CloseCode.HOST_CLOSED, 'Host connection failed');
       },
     );

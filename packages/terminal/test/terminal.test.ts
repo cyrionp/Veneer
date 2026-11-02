@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { AIDS_3270, AIDS_5250, COMMON_AIDS, DeviceNameInUseError, fieldId, isAidName } from '../src/index.ts';
+import { AIDS_3270, AIDS_5250, COMMON_AIDS, DeviceNameInUseError, fieldId, hostHasAid, isAidName } from '../src/index.ts';
 
 const packages = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 
@@ -16,6 +16,12 @@ test('key names: Enter, Clear, F1-F24, the 5250 keys and the 3270 PA keys', () =
   }
   const all = [...COMMON_AIDS, ...AIDS_5250, ...AIDS_3270];
   assert.equal(new Set(all).size, all.length, 'no key is in two lists');
+});
+
+test('each host type has the shared keys and its own', () => {
+  for (const k of ['Enter', 'Clear', 'F1', 'F24'] as const) assert.ok(hostHasAid('5250', k) && hostHasAid('3270', k), k);
+  assert.deepEqual(AIDS_5250.map((k) => [hostHasAid('5250', k), hostHasAid('3270', k)]), AIDS_5250.map(() => [true, false]));
+  assert.deepEqual(AIDS_3270.map((k) => [hostHasAid('5250', k), hostHasAid('3270', k)]), AIDS_3270.map(() => [false, true]));
 });
 
 test('field ids are row:col', () => {
@@ -37,7 +43,7 @@ function sources(dir: string): string[] {
 }
 
 test('only the server code that starts a session imports a host package', () => {
-  const allowed = new Set(['server/src/sessions.ts', 'server/src/config.ts']);
+  const allowed = new Set(['server/src/host.ts']);
   const found: string[] = [];
   for (const pkg of fs.readdirSync(packages)) {
     const src = path.join(packages, pkg, 'src');

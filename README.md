@@ -24,7 +24,7 @@ install.
 | --- | --- | --- |
 | `packages/terminal` | 3270 stage 1 | The host-neutral model the other packages use: screens, fields, keys and the session interface |
 | `packages/tn5250` | Milestone 1 | Pure TypeScript TN5250 client: Telnet/TLS, 5250 data stream, screen model |
-| `packages/tn3270` | 3270 stage 2 | Pure TypeScript TN3270E/TN3270 client: Telnet/TLS, 3270 data stream, query replies, screen model. The server doesn't use it yet (#28) |
+| `packages/tn3270` | 3270 stage 2 | Pure TypeScript TN3270E/TN3270 client: Telnet/TLS, 3270 data stream, query replies, screen model |
 | `packages/server` | Milestone 2 | Session server: one host session per browser tab over WebSocket |
 | `packages/client` | Milestone 3 | Browser client: React UI with auto-transform rules and the designer |
 | `packages/screens` | Milestone 4 | Screen definitions: identification, customizations, validation |
@@ -62,8 +62,9 @@ and `traces/` is git-ignored.
 
 ## Session server
 
-Each browser WebSocket at `/ws` gets its own TN5250 session to the IBM i set in
-`.env`. The browser cannot choose the host. Messages are JSON (see
+Each browser WebSocket at `/ws` gets its own host session to the host set in
+`.env`: TN5250 to an IBM i, or TN3270 to a mainframe (see [Mainframe (3270)
+hosts](#mainframe-3270-hosts)). The browser cannot choose the host. Messages are JSON (see
 `packages/server/src/protocol.ts`):
 
 1. The client sends `{"type":"hello"}`, or `{"type":"hello","resumeToken":"..."}` after a reload.
@@ -82,6 +83,28 @@ restart or by another emulator, IBM i first checks that the session holding it i
 alive, then asks for another name. Veneer offers the next free one (up to three more) and
 skips the busy name for 10 minutes. The log records `device name in use` and the
 `device assigned` to each session.
+
+### Mainframe (3270) hosts
+
+Mainframe support is being built in stages (issues #26 to #31): Veneer connects to
+3270 hosts and shows their screens, but its keys, field rules and designer are
+still made for 5250, and it has not yet been tested against a real mainframe.
+
+Each server talks to one kind of host. For a mainframe, set `VENEER_HOST_TYPE=3270`:
+
+| Setting | 3270 meaning |
+| --- | --- |
+| `VENEER_HOST`, `VENEER_PORT`, `VENEER_TLS*` | The host's TN3270 server, as for an IBM i (992 with TLS, 23 without). |
+| `VENEER_TERMINAL_TYPE` | `IBM-3278-2-E` (24x80, the default), `-3-E` (32x80), `-4-E` (43x80) or `-5-E` (27x132). |
+| `VENEER_DEVNAME_PREFIX` | LU names `PREFIX01`, `PREFIX02`, … (prefix 1-6 characters). The host's TN3270 server must define them. Blank lets the host pick an LU. |
+| `VENEER_TN3270E` | `false` uses plain TN3270 even if the host offers TN3270E (default: TN3270E when offered). |
+| `VENEER_CCSID` | The host code page: `37` (default) or `1047`. Also works for 5250. |
+
+A 3270 screen never gets the same screen id as a 5250 screen, so definitions made for
+one host type never match the other. The designer records the host type in new
+definitions (`"host": "3270"`), and then only lets them use keys that host has: PA1 to
+PA3 on a 3270, Help, Print, Page Up/Down and Record Backspace on a 5250. Definitions
+without `host` match either.
 
 ### Admin page
 
@@ -213,6 +236,9 @@ definition** goes further. Each definition is one JSON file in `screens/` (or
   List several IDs for variants of one screen, such as a list with no records (which
   has no option fields). If several definitions match, one with a screen ID wins, then
   the one with the most text rules.
+- **Host type:** `"host": "5250"` or `"3270"` limits a definition to screens from that
+  kind of host and the keys it has. The designer fills it in; without it a definition
+  matches either.
 - **Changes:**
   - `hide` hides the item at a position.
   - `text` replaces an item's text.

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { Attr, HostStream, Terminal, buildRecord, getCodepage, snapshot } from '@veneer/tn5250';
-import { hostToIso, isoToHost, matchScreen, validateDefinition, validateSite, validateStyle, type ScreenDefinition } from '../src/index.ts';
+import { hostToIso, isoToHost, matchScreen, matches, validateDefinition, validateSite, validateStyle, type ScreenDefinition } from '../src/index.ts';
 
 const cp = getCodepage(37);
 function screen(build: (s: HostStream) => HostStream) {
@@ -21,6 +21,33 @@ test('matches text at exact positions and prefers the most specific definition',
   assert.equal(matchScreen(orders, [byTitle, byBoth])?.id, 'by-both');
   assert.equal(matchScreen(orders, [wrongCol]), undefined);
   assert.equal(matchScreen(orders, [{ ...byTitle, match: { ...byTitle.match, cols: 132 } }]), undefined);
+});
+
+test('a definition for one host type never matches a screen from the other', () => {
+  const text = [{ row: 1, col: 2, text: 'ORD100' }];
+  const either = def('either', text);
+  const ibmi: ScreenDefinition = { ...def('ibmi', text), host: '5250' };
+  const mainframe: ScreenDefinition = { ...def('mainframe', text), host: '3270' };
+  assert.deepEqual([either, ibmi, mainframe].map((d) => matches(orders, d)), [true, true, false]);
+  const from3270 = { ...orders, host: '3270' as const };
+  assert.deepEqual([either, ibmi, mainframe].map((d) => matches(from3270, d)), [true, false, true]);
+  assert.equal(matchScreen(from3270, [ibmi, mainframe])?.id, 'mainframe');
+});
+
+test('a definition can say its host type, and then only uses keys that host has', () => {
+  const base = { id: 'x', name: 'X', match: { text: [{ row: 1, col: 1, text: 'X' }] }, changes: [] };
+  const button = (aid: string) => [{ op: 'button', label: 'Go', action: { aid } }];
+  const clean = validateDefinition({ ...base, host: '3270', changes: button('PA1') });
+  assert.deepEqual(Object.keys(clean), ['id', 'name', 'host', 'match', 'changes']);
+  assert.equal(clean.host, '3270');
+  assert.throws(() => validateDefinition({ ...base, host: '3270', changes: button('PageDown') }), /changes\[0\]\.action\.aid: PageDown is not a 3270 key/);
+  assert.throws(() => validateDefinition({ ...base, host: '5250', changes: button('PA2') }), /PA2 is not a 5250 key/);
+  assert.equal(validateDefinition({ ...base, changes: button('PA1') }).host, undefined, 'no host: any key');
+  assert.throws(() => validateDefinition({ ...base, host: 'zos' }), /host: must be "5250" or "3270"/);
+  // 3270 models 3 and 4 are taller than any 5250 screen.
+  assert.equal(validateDefinition({ ...base, match: { ...base.match, rows: 43 } }).match.rows, 43);
+  assert.equal(validateDefinition({ ...base, changes: [{ op: 'hide', at: { row: 43, col: 1 } }] }).changes.length, 1);
+  assert.throws(() => validateDefinition({ ...base, changes: [{ op: 'hide', at: { row: 44, col: 1 } }] }), /row/);
 });
 
 test('validates and cleans definitions', () => {
@@ -56,7 +83,7 @@ test('rejects bad definitions with a useful path', () => {
     [{ ...base, changes: [{ op: 'button', label: 'x', action: { aid: 'F99' } }] }, /aid/],
     [{ ...base, changes: [{ op: 'widget', field: '7:22', widget: { type: 'date', format: 'bogus' } }] }, /format/],
     [{ ...base, changes: [{ op: 'explode' }] }, /op/],
-    [{ ...base, changes: [{ op: 'move', at: { row: 1, col: 1 }, to: { row: 30, col: 1 } }] }, /changes\[0\]\.to\.row/],
+    [{ ...base, changes: [{ op: 'move', at: { row: 1, col: 1 }, to: { row: 44, col: 1 } }] }, /changes\[0\]\.to\.row/],
     [{ ...base, changes: [{ op: 'html', at: { row: 1, col: 1 }, html: 'x', width: 0, height: 1 }] }, /changes\[0\]\.width/],
     [{ ...base, scripts: { show: 'x'.repeat(70_000) } }, /scripts\.show: must be a string/],
     [{ ...base, scripts: { click: 'x' } }, /scripts\.click: must be one of load, show/],

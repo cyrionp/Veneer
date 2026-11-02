@@ -1,7 +1,7 @@
 // Screen definitions: how to recognise a screen, and what to change on it.
 // Stored as one JSON file per screen, so they can be reviewed in git.
 
-import type { AidName } from '@veneer/terminal';
+import type { AidName, HostType } from '@veneer/terminal';
 
 /** Semantic color roles (CUA conventions mapped from 5250 colors). */
 export const ROLES = ['normal', 'emphasis', 'muted', 'danger', 'warning', 'accent', 'accent2'] as const;
@@ -149,6 +149,8 @@ export interface ScreenDefinition {
   /** File name and URL id: lowercase letters, digits and dashes. */
   id: string;
   name: string;
+  /** The host type the screen comes from; only screens from it match. Unset: either. */
+  host?: HostType;
   match: Match;
   /** Replaces the detected page title. */
   title?: string;

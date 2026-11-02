@@ -13,6 +13,8 @@ const config = loadConfig({
   VENEER_DESIGNER: 'local',
   VENEER_ADMIN: 'local',
   ...process.env,
+  // The demo host is an IBM i (5250), whatever .env says.
+  VENEER_HOST_TYPE: '5250', VENEER_TN3270E: '',
   VENEER_HOST: '127.0.0.1', VENEER_PORT: String(hostPort), VENEER_TLS: 'false',
 });
 const server = createServer(config);

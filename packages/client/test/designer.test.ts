@@ -14,6 +14,8 @@ test('a new definition is recognised by the screen id', () => {
   const def = newDefinition(snap, transform(snap));
   assert.equal(def.id, 'work-with-active-jobs');
   assert.deepEqual(def.match, { screenIds: [screenId(snap)], text: [] });
+  assert.equal(def.host, '5250', 'the designer records the host type');
+  assert.equal(newDefinition({ ...snap, host: '3270' }, transform(snap)).host, '3270');
   assert.ok(matches(snap, def), 'a new definition matches the screen it was made on');
   assert.ok(!matches(mainMenu(), def));
 });

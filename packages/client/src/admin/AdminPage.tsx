@@ -10,7 +10,7 @@ interface ServerInfo {
   node: string;
   startedAt: string;
   uptimeSeconds: number;
-  ibmi: { host: string; port: number; tls: boolean };
+  ibmi: { type?: '5250' | '3270'; host: string; port: number; tls: boolean };
   https: boolean;
   maxSessions: number;
   deviceNamePrefix: string | null;
@@ -253,8 +253,8 @@ function Problems({ problems, now }: { problems: Problem[]; now: number }) {
 
 function Server({ info }: { info: ServerInfo }) {
   const rows: Array<[string, string]> = [
-    ['IBM i', `${info.ibmi.host}:${info.ibmi.port}`],
-    ['IBM i connection', info.ibmi.tls ? 'TLS' : 'Plain Telnet (unencrypted)'],
+    [hostName(info), `${info.ibmi.host}:${info.ibmi.port}`],
+    [`${hostName(info)} connection`, info.ibmi.tls ? 'TLS' : 'Plain Telnet (unencrypted)'],
     ['Browser connection', info.https ? 'HTTPS' : 'HTTP'],
     ['Device names', info.deviceNamePrefix ? `${info.deviceNamePrefix}…` : 'Assigned by IBM i'],
     ['Session limit', String(info.maxSessions)],
@@ -275,6 +275,11 @@ function Server({ info }: { info: ServerInfo }) {
 }
 
 /** "::ffff:10.0.0.5" reads better as 10.0.0.5. */
+/** What the host is called: an IBM i, or a 3270 mainframe. */
+function hostName(info: ServerInfo): string {
+  return info.ibmi.type === '3270' ? 'Mainframe (3270)' : 'IBM i';
+}
+
 function address(remote: string): string {
   return remote.replace(/^::ffff:/, '');
 }

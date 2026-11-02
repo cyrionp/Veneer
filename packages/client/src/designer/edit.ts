@@ -14,7 +14,7 @@ export function slug(text: string): string {
 /** A new definition for this screen, recognised by its screen id. */
 export function newDefinition(snap: ScreenSnapshot, view: ScreenView): ScreenDefinition {
   const name = view.title ?? 'New screen';
-  return { id: slug(name), name, match: { screenIds: [screenId(snap)], text: [] }, changes: [] };
+  return { id: slug(name), name, host: snap.host, match: { screenIds: [screenId(snap)], text: [] }, changes: [] };
 }
 
 export function addScreenId(def: ScreenDefinition, id: string): ScreenDefinition {

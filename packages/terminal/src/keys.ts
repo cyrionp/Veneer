@@ -1,6 +1,8 @@
 // The keys (AIDs) that send a screen to the host. Some every host type has;
 // the rest only some do.
 
+import type { HostType } from './screen.ts';
+
 /** F1-F24 (PF1-PF24 on a 3270). */
 export type FunctionKeyName = `F${1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21 | 22 | 23 | 24}`;
 
@@ -19,4 +21,10 @@ const NAMED: ReadonlySet<string> = new Set<string>([...COMMON_AIDS, ...AIDS_5250
 
 export function isAidName(v: unknown): v is AidName {
   return typeof v === 'string' && (NAMED.has(v) || /^F([1-9]|1\d|2[0-4])$/.test(v));
+}
+
+/** Whether a host type has a key: 5250s have no PA keys, 3270s no Help, paging, Print or Record Backspace. */
+export function hostHasAid(host: HostType, aid: AidName): boolean {
+  const only = (host === '5250' ? AIDS_3270 : AIDS_5250) as readonly string[];
+  return !only.includes(aid);
 }

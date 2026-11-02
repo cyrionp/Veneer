@@ -76,3 +76,12 @@ test('ids are stable across versions', () => {
 });
 
 const STABLE_ID = '041d16c4529775';
+
+test('a 3270 screen never gets the id of the same-looking 5250 screen', () => {
+  const ibmi = jobs(3);
+  const mainframe = { ...ibmi, host: '3270' as const };
+  assert.notEqual(screenId(mainframe), screenId(ibmi));
+  assert.equal(screenId(ibmi), STABLE_ID, '5250 ids are unchanged');
+  assert.equal(screenId({ ...jobs(1, { time: '12/31/26  23:59:59' }), host: '3270' }), screenId(mainframe), 'data is still ignored');
+  assert.match(fingerprint(mainframe).source, /^3270\n24x80\n/);
+});

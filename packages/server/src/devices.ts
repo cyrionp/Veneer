@@ -4,8 +4,8 @@
 /** How long to skip a name the host said is in use (e.g. by a leftover job). */
 const AVOID_MS = 10 * 60_000;
 
-/** IBM i device names: up to 10 characters, starting with a letter. */
-const PREFIX = /^[A-Z][A-Z0-9]{0,7}$/;
+/** Device names start with a letter; IBM i takes 10 characters, a VTAM LU 8. */
+const NAME_START = /^[A-Z][A-Z0-9]*$/;
 
 export class DeviceNamePool {
   readonly prefix: string;
@@ -15,14 +15,15 @@ export class DeviceNamePool {
   /** Names in use outside this pool, by number, until a time. */
   private readonly avoided = new Map<number, number>();
 
-  constructor(prefix: string) {
+  /** `maxLength` is the longest name the host takes: 10 on IBM i, 8 for a 3270 LU. */
+  constructor(prefix: string, maxLength = 10) {
     const p = prefix.toUpperCase();
-    if (!PREFIX.test(p)) {
-      throw new Error(`Device name prefix "${prefix}" must be 1-8 letters/digits starting with a letter`);
+    if (!NAME_START.test(p) || p.length > maxLength - 2) {
+      throw new Error(`Device name prefix "${prefix}" must be 1-${maxLength - 2} letters/digits starting with a letter`);
     }
     this.prefix = p;
-    // Fill the 10-character name with digits, but no more than 3 (999 devices).
-    this.digits = Math.min(3, 10 - p.length);
+    // Fill the name with digits, but no more than 3 (999 devices).
+    this.digits = Math.min(3, maxLength - p.length);
     this.capacity = 10 ** this.digits - 1;
   }
 

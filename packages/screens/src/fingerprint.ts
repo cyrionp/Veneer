@@ -1,6 +1,8 @@
 // Screen IDs: a hash of what stays the same when the data changes. That is
-// the screen size, the input-field layout (from the DDS record format) and
-// the title. Data, messages and the system name are left out.
+// the screen size, the input-field layout (from the DDS record format or BMS
+// map) and the title. Data, messages and the system name are left out. A 3270
+// screen's id also says it is a 3270, so it never matches a 5250 screen's;
+// 5250 ids are as they always were.
 
 import type { FieldSnapshot, ScreenSnapshot } from '@veneer/terminal';
 import { activeWindow, findWindows, type Region } from './windows.ts';
@@ -33,6 +35,7 @@ export function fingerprint(snap: ScreenSnapshot): Fingerprint {
   const title = win ? win.title ?? highlightedRow(snap, region) : centeredTitle(snap);
 
   const source = [
+    ...(snap.host === '3270' ? ['3270'] : []),
     `${snap.rows}x${snap.cols}`,
     win ? `window ${region.bottom - region.top + 1}x${region.right - region.left + 1}` : 'screen',
     `title ${title ?? ''}`,

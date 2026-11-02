@@ -41,7 +41,7 @@ test('definitions validate URL buttons', () => {
   const base = { id: 'x', name: 'X', match: { text: [{ row: 1, col: 1, text: 'X' }] } };
   const ok = validateDefinition({ ...base, changes: [{ op: 'button', label: 'Map', action: { url: 'https://maps.example.com/?q={6:18}', aid: 'F3' } }] });
   assert.deepEqual(ok.changes[0], { op: 'button', label: 'Map', action: { url: 'https://maps.example.com/?q={6:18}' } });
-  for (const [url, why] of [['javascript:alert(1)', /http/], ['https://{6:18}.example.com/', /host/], ['https://x.example/{30:1}', /screen position/]] as const) {
+  for (const [url, why] of [['javascript:alert(1)', /http/], ['https://{6:18}.example.com/', /host/], ['https://x.example/{44:1}', /screen position/]] as const) {
     assert.throws(() => validateDefinition({ ...base, changes: [{ op: 'button', label: 'L', action: { url } }] }), why);
   }
 });

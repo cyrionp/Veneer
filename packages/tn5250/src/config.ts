@@ -1,4 +1,6 @@
-// Host connection settings from VENEER_* environment variables (see .env.example).
+// Host connection settings from VENEER_* environment variables (see .env.example),
+// for the developer CLI. The server reads its own, for either host type
+// (packages/server/src/host.ts).
 
 import fs from 'node:fs';
 import type { SessionOptions } from './session.ts';

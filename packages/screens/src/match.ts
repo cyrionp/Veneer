@@ -16,6 +16,7 @@ export function textMatches(snap: ScreenSnapshot, m: TextMatch): boolean {
 export function matches(snap: ScreenSnapshot, def: ScreenDefinition, id?: string): boolean {
   const { rows, cols, text, screenIds = [] } = def.match;
   if (screenIds.length === 0 && text.length === 0) return false;
+  if (def.host !== undefined && def.host !== snap.host) return false;
   if (rows !== undefined && rows !== snap.rows) return false;
   if (cols !== undefined && cols !== snap.cols) return false;
   if (screenIds.length > 0 && !screenIds.includes(id ?? screenId(snap))) return false;

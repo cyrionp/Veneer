@@ -2,24 +2,24 @@
 
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { hostSettingsFromEnv, type HostSettings } from '@veneer/tn5250';
 import { brandFromEnv, type Brand } from './brand.ts';
 import { DeviceNamePool } from './devices.ts';
+import { deviceNameLength, hostSettingsFromEnv, hostTypeOf, type HostSettings } from './host.ts';
 
 export interface ServerConfig {
   listenHost: string;
   listenPort: number;
   /** Serve HTTPS/WSS when set. */
   https?: { cert: Buffer; key: Buffer };
-  /** The one IBM i every browser session connects to. */
+  /** The one host (IBM i or mainframe) every browser session connects to. */
   host: HostSettings;
   idleTimeoutMs: number;
   /** How long a host session survives with no browser attached (page reloads). */
   resumeGraceMs: number;
   maxSessions: number;
-  /** Name devices PREFIX01, PREFIX02, ...; unset lets IBM i assign QPADEVxxxx. */
+  /** Name devices (or 3270 LUs) PREFIX01, PREFIX02, ...; unset lets the host assign names. */
   deviceNamePrefix?: string;
-  /** Log every 5250 record (VENEER_TRACE=true), for diagnosing host behaviour. */
+  /** Log every host record (VENEER_TRACE=true), for diagnosing host behaviour. */
   trace?: boolean;
   /** Allowed browser origins; empty means same-origin only. */
   allowedOrigins: string[];
@@ -47,12 +47,12 @@ export interface ServerConfig {
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): ServerConfig {
+  // A fixed device name (VENEER_DEVNAME) can only be used by one session at a
+  // time, so the server ignores it; see VENEER_DEVNAME_PREFIX.
   const host = hostSettingsFromEnv(env);
-  // A fixed device name can only be used by one session at a time; see VENEER_DEVNAME_PREFIX.
-  delete host.deviceName;
 
   // Validate the device name prefix now rather than on the first connection.
-  if (env.VENEER_DEVNAME_PREFIX) new DeviceNamePool(env.VENEER_DEVNAME_PREFIX);
+  if (env.VENEER_DEVNAME_PREFIX) new DeviceNamePool(env.VENEER_DEVNAME_PREFIX, deviceNameLength(hostTypeOf(host)));
 
   if (env.VENEER_DESIGNER_TOKEN !== undefined && env.VENEER_DESIGNER_TOKEN !== '' && env.VENEER_DESIGNER_TOKEN.length < 12) {
     throw new Error('VENEER_DESIGNER_TOKEN must be at least 12 characters');
